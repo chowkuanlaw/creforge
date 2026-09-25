@@ -18,6 +18,10 @@ classifiers = [
   "Intended Audience :: Financial and Insurance Industry",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Office/Business :: Financial",
   "Topic :: Software Development :: Testing",
 ]
@@ -32,6 +36,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "hypothesis>=6.100", "ruff>=0.5"]
+examples = ["matplotlib>=3.7", "jupyter"]
 
 [project.scripts]
 creforge = "creforge.cli:main"

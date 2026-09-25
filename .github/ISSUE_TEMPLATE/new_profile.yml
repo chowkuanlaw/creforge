@@ -1,0 +1,25 @@
+name: New profile
+description: Propose a new built-in profile (population, product mix or scenario)
+labels: [profile]
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: What should this profile represent?
+      placeholder: e.g. a subprime card book, a mortgage-heavy book, a 2-year moratorium scenario
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Public sources for the parameters
+      description: Links to regulator releases, papers or other public references.
+    validations:
+      required: true
+  - type: checkboxes
+    id: cleanroom
+    attributes:
+      label: Clean-room confirmation
+      options:
+        - label: No parameter comes from an employer's or institution's non-public data.
+          required: true

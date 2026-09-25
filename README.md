@@ -1,5 +1,10 @@
 # creforge
 
+[![CI](https://github.com/chowkuanlaw/creforge/actions/workflows/ci.yml/badge.svg)](https://github.com/chowkuanlaw/creforge/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/creforge)](https://pypi.org/project/creforge/)
+[![Python](https://img.shields.io/pypi/pyversions/creforge)](https://pypi.org/project/creforge/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 **PII-safe synthetic credit bureau data, generated from explicit behavioural rules.**
 
 creforge generates realistic, linked credit-bureau-shaped datasets: borrowers, credit
@@ -82,6 +87,12 @@ Baseline, 50k subjects × 36 months:
 
 12-month bad rate by grade: A 0.03% · B 0.5% · C 1.2% · D 6.7% · E 18%.
 
+## Quickstart notebook
+
+[`examples/quickstart.ipynb`](examples/quickstart.ipynb) walks through generating a
+portfolio and building vintage curves, a roll-rate matrix, a simple scorecard check
+against the known risk grade, and a baseline-vs-stressed comparison.
+
 ## Python API
 
 ```python
@@ -136,6 +147,10 @@ measure your own machine.
 8. Country flavour packs built only from public specifications.
 
 ## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), including the clean-room rule. Changes are
+listed in [CHANGELOG.md](CHANGELOG.md); report vulnerabilities privately as described
+in [SECURITY.md](SECURITY.md).
 
 ```console
 $ pip install -e ".[dev]"

@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a new table, column, behaviour or integration
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the testing or analytics task you can't do today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+  - type: checkboxes
+    id: cleanroom
+    attributes:
+      label: Clean-room confirmation
+      options:
+        - label: This request does not require any non-public data, schema or code set.
+          required: true

@@ -1,0 +1,30 @@
+name: Bug report
+description: Something is wrong or an integrity check fails
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Command to reproduce
+      placeholder: creforge generate -n 10000 --seed 42 -o out && creforge validate out
+      render: console
+    validations:
+      required: true
+  - type: input
+    id: sha
+    attributes:
+      label: config_sha256 (from manifest.json)
+  - type: input
+    id: version
+    attributes:
+      label: creforge version, OS and Python version
+      placeholder: creforge 0.1.0, Windows 11, Python 3.12
+    validations:
+      required: true
