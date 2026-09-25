@@ -1,0 +1,153 @@
+# creforge built-in profile: baseline
+#
+# ILLUSTRATIVE ONLY. These parameters are hand-set so that the generated portfolio
+# lands in the same order of magnitude as publicly published aggregate statistics
+# (see `sources`). They are not fitted to, and do not describe, any real lender's or
+# bureau's portfolio. No row-level or proprietary data was used.
+#
+# Units: probabilities are monthly; interest rates are annual; amounts are in an
+# abstract currency unit.
+
+name: baseline
+description: >
+  Generic retail credit bureau population under a flat (benign) macro path.
+sources:
+  - "Federal Reserve Board: Charge-Off and Delinquency Rates on Loans and Leases at Commercial Banks (public statistical release). Used to sanity-check card charge-off and delinquency orders of magnitude."
+  - "Bank Negara Malaysia: Financial Stability Review, household sector asset quality (public). Used to sanity-check secured household impairment levels."
+  - "European Banking Authority: Risk Dashboard, non-performing loan ratios (public)."
+  - "Basel Committee on Banking Supervision: IRB approach, 90 days past due default definition (public). Motivates the 90+ DPD bad definition."
+
+population:
+  age_years: [21, 70]
+  regions: 13
+  income_bands:
+    B1: {share: 0.12, amount_mult: 0.5, holding_mult: 0.60}
+    B2: {share: 0.22, amount_mult: 0.7, holding_mult: 0.85}
+    B3: {share: 0.25, amount_mult: 1.0, holding_mult: 1.00}
+    B4: {share: 0.20, amount_mult: 1.4, holding_mult: 1.10}
+    B5: {share: 0.13, amount_mult: 2.0, holding_mult: 1.20}
+    B6: {share: 0.08, amount_mult: 3.0, holding_mult: 1.30}
+
+# Latent risk grades, best to worst. roll_mult scales roll-forward probabilities,
+# cure_mult scales cure and step-back probabilities.
+grades:
+  A: {share: 0.22, roll_mult: 0.35, cure_mult: 1.35, inquiry_rate: 0.020, approval: 0.93, utilization: 0.15, transactor_share: 0.60, rate_spread: 0.000}
+  B: {share: 0.30, roll_mult: 0.70, cure_mult: 1.10, inquiry_rate: 0.028, approval: 0.85, utilization: 0.30, transactor_share: 0.40, rate_spread: 0.010}
+  C: {share: 0.26, roll_mult: 1.00, cure_mult: 1.00, inquiry_rate: 0.036, approval: 0.72, utilization: 0.45, transactor_share: 0.25, rate_spread: 0.025}
+  D: {share: 0.14, roll_mult: 1.90, cure_mult: 0.85, inquiry_rate: 0.050, approval: 0.55, utilization: 0.65, transactor_share: 0.12, rate_spread: 0.045}
+  E: {share: 0.08, roll_mult: 3.40, cure_mult: 0.70, inquiry_rate: 0.070, approval: 0.35, utilization: 0.80, transactor_share: 0.05, rate_spread: 0.070}
+
+# roll:  C->D1, D1->D2, D2->D3, D3->D4, D4->D5
+# cure:  D1..D5 -> current (arrears paid in full)
+# back:  D2..D5 -> one bucket lower (one installment of arrears paid)
+products:
+  credit_card:
+    kind: revolving
+    holding_rate: 1.10
+    inquiry_share: 0.35
+    amount: {median: 8000, sigma: 0.60}
+    max_age_months: 180
+    interest_rate: 0.15
+    min_payment_pct: 0.05
+    behaviour:
+      roll: [0.018, 0.25, 0.40, 0.55, 0.65]
+      cure: [0.55, 0.20, 0.12, 0.08, 0.03]
+      back: [0.15, 0.10, 0.08, 0.03]
+      close: 0.008
+  personal_loan:
+    kind: installment
+    holding_rate: 0.35
+    inquiry_share: 0.22
+    amount: {median: 15000, sigma: 0.60}
+    tenor_months: [24, 36, 48, 60, 84]
+    interest_rate: 0.08
+    behaviour:
+      roll: [0.012, 0.30, 0.45, 0.55, 0.65]
+      cure: [0.50, 0.18, 0.10, 0.07, 0.03]
+      back: [0.15, 0.10, 0.08, 0.03]
+      restructure: 0.03
+      rs_cure: 0.04
+      rs_redefault: 0.03
+      close: 0.006
+  mortgage:
+    kind: installment
+    holding_rate: 0.30
+    inquiry_share: 0.06
+    amount: {median: 350000, sigma: 0.50}
+    round_to: 1000
+    tenor_months: [300, 360, 420]
+    max_age_months: 240
+    interest_rate: 0.042
+    rate_grade_sensitivity: 0.3
+    secured: true
+    behaviour:
+      roll: [0.007, 0.22, 0.30, 0.35, 0.40]
+      cure: [0.60, 0.25, 0.15, 0.10, 0.05]
+      back: [0.15, 0.12, 0.10, 0.05]
+      restructure: 0.08
+      rs_cure: 0.05
+      rs_redefault: 0.02
+      close: 0.004
+  auto_loan:
+    kind: installment
+    holding_rate: 0.35
+    inquiry_share: 0.10
+    amount: {median: 70000, sigma: 0.50}
+    tenor_months: [36, 60, 84, 108]
+    interest_rate: 0.035
+    rate_grade_sensitivity: 0.5
+    secured: true
+    behaviour:
+      roll: [0.010, 0.25, 0.40, 0.50, 0.60]
+      cure: [0.55, 0.20, 0.12, 0.08, 0.04]
+      back: [0.15, 0.10, 0.08, 0.04]
+      restructure: 0.04
+      rs_cure: 0.04
+      rs_redefault: 0.03
+      close: 0.006
+  overdraft:
+    kind: revolving
+    holding_rate: 0.08
+    inquiry_share: 0.04
+    amount: {median: 20000, sigma: 0.70}
+    max_age_months: 180
+    interest_rate: 0.08
+    min_payment_pct: 0.03
+    behaviour:
+      roll: [0.012, 0.25, 0.40, 0.50, 0.60]
+      cure: [0.55, 0.20, 0.12, 0.08, 0.03]
+      back: [0.15, 0.10, 0.08, 0.03]
+      close: 0.006
+  bnpl:
+    kind: installment
+    holding_rate: 0.25
+    inquiry_share: 0.23
+    amount: {median: 600, sigma: 0.70}
+    round_to: 10
+    tenor_months: [3, 4, 6]
+    interest_rate: 0.0
+    rate_grade_sensitivity: 0.0
+    behaviour:
+      roll: [0.03, 0.30, 0.45, 0.55, 0.65]
+      cure: [0.60, 0.20, 0.10, 0.06, 0.02]
+      back: [0.12, 0.08, 0.05, 0.02]
+      close: 0.0
+
+seasoning: {floor: 0.5, peak: 1.35, peak_age: 15, tail: 0.85}
+macro:
+  points: [[0, 1.0]]
+inquiries: {recent_window_months: 6, recent_penalty: 0.35, withdrawn_share: 0.05}
+lenders: 40
+writeoff_after_months: 6
+
+# Calibration bands checked by `creforge validate`. Deliberately wide: they encode
+# "right order of magnitude for this product type", not a point estimate.
+#   dpd30_share:          share of open account-months at 30+ DPD
+#   annual_writeoff_rate: write-offs per open account-year
+targets:
+  credit_card:   {dpd30_share: [0.020, 0.050], annual_writeoff_rate: [0.020, 0.060]}
+  personal_loan: {dpd30_share: [0.020, 0.060], annual_writeoff_rate: [0.015, 0.050]}
+  mortgage:      {dpd30_share: [0.005, 0.025], annual_writeoff_rate: [0.000, 0.006]}
+  auto_loan:     {dpd30_share: [0.015, 0.050], annual_writeoff_rate: [0.010, 0.040]}
+  overdraft:     {dpd30_share: [0.015, 0.050], annual_writeoff_rate: [0.010, 0.050]}
+  bnpl:          {dpd30_share: [0.030, 0.100], annual_writeoff_rate: [0.003, 0.030]}

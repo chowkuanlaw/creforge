@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "creforge"
+version = "0.1.0.dev0"
+description = "PII-safe synthetic credit bureau data from explicit behavioural rules."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "creforge contributors" }]
+keywords = ["synthetic-data", "credit-risk", "credit-bureau", "test-data", "privacy"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: Office/Business :: Financial",
+  "Topic :: Software Development :: Testing",
+]
+dependencies = [
+  "numpy>=1.26",
+  "polars>=1.0",
+  "pyarrow>=14",
+  "pydantic>=2.5",
+  "pyyaml>=6",
+  "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "hypothesis>=6.100", "ruff>=0.5"]
+
+[project.scripts]
+creforge = "creforge.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/chowkuanlaw/creforge"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/creforge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: statistical tests on larger populations"]
+
+[tool.ruff]
+line-length = 110
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "NPY"]
