@@ -31,6 +31,9 @@ in, so no real data can come out.
 | Interface | Python library + CLI, writing files (Parquet/CSV) |
 | v1 scope | Core 4 tables + deterministic seeding |
 | Scale | ~1M borrowers comfortably, vectorized (NumPy + Polars) |
+| Table count | Stay at 4 for v1. Guarantors and joint accounts are the first item on the roadmap (§9) |
+| History window | 36 months by default, configurable from 12 to 120. Accounts opened before the window start part-way through their life (§4.5) |
+| Name | `creforge` (available on PyPI as of 2026-09-25) |
 
 ## 3. Data model (v1: 4 tables)
 
@@ -68,7 +71,7 @@ has, so "credit hungry" behaviour shows up in the data.
 |---|---|---|
 | `account_id` | str | |
 | `subject_id` | str | FK → subject |
-| `inquiry_id` | str | FK → the approved inquiry that opened it (nullable only for accounts that predate the simulation window) |
+| `inquiry_id` | str | FK → the approved inquiry that opened it (null for accounts that were opened before the window, §4.5) |
 | `lender_id` | str | Same lender as the inquiry |
 | `product_type` | cat | `credit_card`, `personal_loan`, `mortgage`, `auto_loan`, `overdraft`, `bnpl` |
 | `open_date` | date | ≥ inquiry date |
@@ -138,6 +141,21 @@ their own, so the numbers always agree with the DPD:
 Each monthly step is a batched operation over every active account: build an
 `(n_active × n_states)` probability array, then do one categorical draw with
 `rng.random` and a cumulative-sum search. There are no Python loops per account.
+
+### 4.5 Accounts opened before the window
+A real bureau snapshot mixes new accounts with ones that have been on book for years,
+especially mortgages. If every account started at month 0, the data would contain no
+mature loans and the seasoning curves would be skewed toward young accounts.
+
+- At the start of the window, each subject gets pre-existing accounts with open dates
+  back-dated up to 20 years, depending on the product (bounded by its tenor).
+- Each of those accounts starts in a state drawn from the model's own distribution for
+  its product, grade and age. For installment products, the balance is the amortized
+  balance at that age plus any arrears. This avoids simulating the years before the
+  window, so it costs almost nothing.
+- New accounts then open during the window from approved inquiries.
+- `validate` checks that the delinquency mix in the first month matches the steady
+  state, so there is no warm-up artefact at the start of the window.
 
 ## 5. Scale and determinism
 
@@ -220,13 +238,17 @@ example, rows that don't sum to 1) fail fast with a clear message. v1 ships the
 
 ## 9. Out of scope for v1 (roadmap)
 
-1. Business subjects, directors and guarantor links (a graph of related parties).
-2. Collateral and legal/litigation record tables.
-3. Clearly marked synthetic PII (names, IDs with an invalid checksum) for UI testing.
-4. Calibrating profiles to *published aggregate* statistics (never row-level data).
-5. Scripted scenarios, such as a recession starting at month *m* or a moratorium.
-6. Loaders for Postgres/DuckDB/Iceberg, plus dbt seed and Glue catalog integration.
-7. Country flavour packs with code-set mappings, built only from public specs.
+1. **v1.1:** Guarantor and joint-account links: an `account_party` table with roles
+   `primary`, `joint` and `guarantor`. This changes subject→account from one-to-many to
+   many-to-many and brings in contingent liabilities (a guarantee turning into a real
+   debt). It has high value for bureau use cases and is the first thing to add after v1.
+2. Business subjects, directors and shareholding links (a graph of related parties).
+3. Collateral and legal/litigation record tables.
+4. Clearly marked synthetic PII (names, IDs with an invalid checksum) for UI testing.
+5. Calibrating profiles to *published aggregate* statistics (never row-level data).
+6. Scripted scenarios, such as a recession starting at month *m* or a moratorium.
+7. Loaders for Postgres/DuckDB/Iceberg, plus dbt seed and Glue catalog integration.
+8. Country flavour packs with code-set mappings, built only from public specs.
 
 ## 10. Risks and open questions
 
