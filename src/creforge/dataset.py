@@ -51,6 +51,10 @@ class Dataset:
     def account_month(self) -> pl.DataFrame:
         return self.table("account_month")
 
+    @property
+    def account_party(self) -> pl.DataFrame:
+        return self.table("account_party")
+
     def iter_chunks(self) -> Iterator[dict[str, pl.DataFrame]]:
         yield from self.chunks
 
@@ -115,7 +119,7 @@ def _write_manifest(out: Path, config: Config, format: Format, counts: list[dict
         "format": format,
         "chunks": config.n_chunks,
         "config_sha256": config.sha256(),
-        "row_counts": {t: sum(c[t] for c in counts) for t in TABLES},
+        "row_counts": {t: sum(c.get(t, 0) for c in counts) for t in TABLES},
         "privacy": PRIVACY_STATEMENT,
         "config": config.model_dump(mode="json"),
     }
@@ -142,13 +146,15 @@ class DiskDataset:
     def iter_chunks(self) -> Iterator[dict[str, pl.DataFrame]]:
         fmt = self.manifest["format"]
         for i in range(self.manifest["chunks"]):
-            yield {t: _read(part_path(self.path, t, i, fmt), fmt) for t in TABLES}
+            # Datasets written by older versions may lack newer tables (e.g. account_party).
+            yield {t: _read(part_path(self.path, t, i, fmt), fmt) for t in TABLES
+                   if part_path(self.path, t, i, fmt).exists()}
 
 
 # CSV loses types; restore the non-string columns explicitly instead of guessing.
 _CSV_TYPES: dict[str, pl.DataType] = {
-    **dict.fromkeys(("created_month", "inquiry_date", "open_date", "close_date", "as_of_month"),
-                    pl.Date()),
+    **dict.fromkeys(("created_month", "inquiry_date", "open_date", "close_date", "as_of_month",
+                     "start_date"), pl.Date()),
     **dict.fromkeys(("requested_amount", "credit_limit", "principal", "interest_rate", "balance",
                      "amount_due", "amount_paid"), pl.Float64()),
     **dict.fromkeys(("birth_year", "tenor_months", "months_in_arrears"), pl.Int16()),

@@ -26,6 +26,7 @@ def _random_book(rng, n):
         state=state, mia=mia.astype(np.int32), bal=np.round(amount * rng.uniform(0.2, 1.0, n), 2),
         arrears=np.zeros(n), inst=np.zeros(n), active=np.ones(n, dtype=bool),
         close_month=np.full(n, -1, dtype=np.int32), close_reason=np.full(n, -1, dtype=np.int8),
+        roll_mult=np.ones(n), cure_mult=np.ones(n), guaranteed=rng.random(n) < 0.2,
     )
     book.arrears[:] = np.round(np.minimum(book.mia * 0.03 * book.bal, book.bal), 2)
     book.inst[:] = E.next_installment(t, book, np.arange(n))
@@ -63,6 +64,7 @@ def test_writeoff_after_configured_months_in_120_plus():
     book = _random_book(rng, 200)
     book.state[:] = E.D5
     book.mia[:] = 5
+    book.guaranteed[:] = False
     # Remove every exit from D5 so accounts must sit there until write-off.
     t = E.Tables(**{**TABLES.__dict__, "cure": TABLES.cure * 0, "back": TABLES.back * 0,
                     "rs": TABLES.rs * 0})
@@ -71,6 +73,28 @@ def test_writeoff_after_configured_months_in_120_plus():
         E.step(t, book, np.flatnonzero(book.active), m, 1.0, rng)
     assert (book.state == E.WO).all()
     assert (book.close_month == t.writeoff_after - 1).all()
+
+
+def test_called_guarantor_cures_the_account():
+    rng = np.random.default_rng(1)
+    book = _random_book(rng, 300)
+    book.state[:] = E.D5
+    book.mia[:] = 5
+    book.guaranteed[:] = True
+    book.inst[:] = np.maximum(book.inst, 1.0)
+    t = E.Tables(**{**TABLES.__dict__, "guarantor_call": 1.0})
+    rows = E.step(t, book, np.arange(300), 0, 1.0, rng)
+    # Cured; a small loan can be paid off completely by the guarantor's payment.
+    assert np.isin(book.state, (E.C, E.CL)).all() and (book.mia == 0).all()
+    assert (rows.amount_paid == rows.amount_due).all()
+
+
+def test_joint_multiplier_is_geometric_mean():
+    from creforge.parties import blended_multipliers
+    roll, cure = blended_multipliers(TABLES.g_roll, TABLES.g_cure, np.array([0, 4, 2]), np.array([4, -1, 2]))
+    assert np.isclose(roll[0], np.sqrt(TABLES.g_roll[0] * TABLES.g_roll[4]))
+    assert roll[1] == TABLES.g_roll[4] and roll[2] == TABLES.g_roll[2]
+    assert np.isclose(cure[0], np.sqrt(TABLES.g_cure[0] * TABLES.g_cure[4]))
 
 
 def test_initial_state_table_is_distribution():

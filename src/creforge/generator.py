@@ -9,10 +9,11 @@ import numpy as np
 import polars as pl
 
 from . import engine as E
+from . import parties as P
 from .config import Config, Profile
 from .ids import make_ids
 
-TABLES = ("subject", "inquiry", "account", "account_month")
+TABLES = ("subject", "inquiry", "account", "account_month", "account_party")
 OUTCOMES = ("approved", "declined", "withdrawn")
 MAX_PRE_WINDOW_AGE = 240
 MIN_BORROWER_AGE = 18
@@ -224,7 +225,7 @@ def _initial_balances(ctx: Context, book: E.Book, idx: np.ndarray, age0: np.ndar
 
 
 def _build_book(ctx: Context, subj: Subjects, pre: Terms, age0: np.ndarray, new: Terms,
-                new_month: np.ndarray, rng) -> E.Book:
+                new_month: np.ndarray, links: P.Links, rng) -> E.Book:
     t = ctx.tables
     product = np.concatenate([pre.product, new.product]).astype(np.int16)
     s_idx = np.concatenate([pre.subject, new.subject])
@@ -235,6 +236,8 @@ def _build_book(ctx: Context, subj: Subjects, pre: Terms, age0: np.ndarray, new:
     rev = t.revolving[product]
     principal = np.where(rev, 0.0, amount)
     n, n_pre = len(product), len(pre.product)
+    joint_grade = np.where(links.joint >= 0, subj.grade[np.maximum(links.joint, 0)], -1)
+    roll_mult, cure_mult = P.blended_multipliers(t.g_roll, t.g_cure, grade, joint_grade)
     book = E.Book(
         product=product,
         grade=grade,
@@ -252,10 +255,15 @@ def _build_book(ctx: Context, subj: Subjects, pre: Terms, age0: np.ndarray, new:
         active=np.ones(n, dtype=bool),
         close_month=np.full(n, -1, dtype=np.int32),
         close_reason=np.full(n, E.CR_NONE, dtype=np.int8),
+        roll_mult=roll_mult,
+        cure_mult=cure_mult,
+        guaranteed=links.guarantor >= 0,
     )
-    # Pre-window accounts start in a state drawn from the engine's own age profile.
+    # Pre-window accounts start in a state drawn from the engine's own age profile, using
+    # the grade closest to the account's (possibly joint-blended) risk.
     pre_idx = np.arange(n_pre)
-    probs = ctx.init_table[product[:n_pre], grade[:n_pre], age0]
+    init_grade = P.nearest_grade(t.g_roll, roll_mult[:n_pre])
+    probs = ctx.init_table[product[:n_pre], init_grade, age0]
     state = _choice_rows(rng, probs)
     extra = rng.integers(0, t.writeoff_after, n_pre)
     mia = np.where(state <= E.D5, state, 0) + np.where(state == E.D5, extra, 0)
@@ -310,7 +318,21 @@ def generate_chunk(cfg: Config, chunk: int, ctx: Context | None = None) -> dict[
     new.amount = np.maximum(np.round(new.amount * haircut / round_to), 1.0) * round_to
     open_day = inq.day[ok] + np.floor(rng.random(len(ok)) * (29 - inq.day[ok])).astype(np.int32)
 
-    book = _build_book(ctx, subj, pre, age0, new, inq.month[ok], rng)
+    # Linked parties use their own random stream, independent of the main one.
+    party_rng = np.random.default_rng(seed_seq.spawn(1)[0])
+    start_year = ctx.start.astype("datetime64[Y]").astype(int) + 1970
+    links = P.select(
+        prof, t.products, t.grades,
+        subj_age=(start_year - subj.birth_year).astype(np.int64),
+        subj_region=subj.region.astype(np.int64),
+        subj_grade=subj.grade.astype(np.int64),
+        subj_max_history=subj.max_history,
+        acc_subject=np.concatenate([pre.subject, new.subject]),
+        acc_product=np.concatenate([pre.product, new.product]).astype(np.int64),
+        acc_age0=np.concatenate([age0, np.zeros(len(ok), dtype=np.int32)]),
+        rng=party_rng,
+    )
+    book = _build_book(ctx, subj, pre, age0, new, inq.month[ok], links, rng)
     rows = _simulate(ctx, book, rng)
 
     # ids
@@ -390,4 +412,22 @@ def generate_chunk(cfg: Config, chunk: int, ctx: Context | None = None) -> dict[
         "months_in_arrears": rows.mia,
         "status": _enum(rows.status, E.STATUSES),
     })
-    return {"subject": subject, "inquiry": inquiry, "account": account, "account_month": account_month}
+    # account_party: one primary row per account, plus joint / guarantor rows.
+    acc_all = np.arange(book.size)
+    has_j, has_g = links.joint >= 0, links.guarantor >= 0
+    p_acc = np.concatenate([acc_all, acc_all[has_j], acc_all[has_g]])
+    p_subj = np.concatenate([acc_subject, links.joint[has_j], links.guarantor[has_g]])
+    p_role = np.concatenate([
+        np.full(book.size, P.ROLE_PRIMARY), np.full(has_j.sum(), P.ROLE_JOINT),
+        np.full(has_g.sum(), P.ROLE_GUARANTOR),
+    ]).astype(np.int8)
+    order = np.lexsort((p_role, p_acc))
+    p_acc, p_subj, p_role = p_acc[order], p_subj[order], p_role[order]
+    account_party = pl.DataFrame({
+        "account_id": account_ids[p_acc],
+        "subject_id": subject_ids[p_subj],
+        "role": _enum(p_role, P.ROLES),
+        "start_date": open_date[p_acc],
+    })
+    return {"subject": subject, "inquiry": inquiry, "account": account, "account_month": account_month,
+            "account_party": account_party}

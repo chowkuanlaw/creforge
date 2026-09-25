@@ -29,6 +29,33 @@ def test_schema(small_dataset):
     assert small_dataset.subject.height == 3000
 
 
+def test_account_party(small_dataset):
+    ap = small_dataset.table("account_party")
+    assert ap.columns == ["account_id", "subject_id", "role", "start_date"]
+    roles = dict(ap["role"].cast(pl.String).value_counts().iter_rows())
+    assert roles["primary"] == small_dataset.account.height
+    assert roles["joint"] > 0 and roles["guarantor"] > 0
+
+
+def test_parties_can_be_disabled():
+    prof = cf.load_profile("baseline").model_dump()
+    prof["parties"]["enabled"] = False
+    cfg = cf.Config(profile=cf.Profile.model_validate(prof), subjects=1000, months=12, seed=1)
+    ds = cf.generate(cfg)
+    assert set(ds.table("account_party")["role"].cast(pl.String).unique()) == {"primary"}
+    assert cf.validate(ds).integrity_ok
+
+
+def test_validates_dataset_without_party_table(tmp_path):
+    import shutil
+    cfg = cf.Config.from_profile("baseline", subjects=500, months=12, seed=8)
+    cf.write_dataset(cfg, tmp_path)
+    shutil.rmtree(tmp_path / "account_party")  # as written by creforge 0.1
+    report = cf.validate(tmp_path)
+    assert report.integrity_ok
+    assert all(c.passed is None for c in report.checks if c.name.startswith("party_"))
+
+
 def test_no_pii_columns(small_dataset):
     cols = {c for name in ("subject", "inquiry", "account") for c in small_dataset.table(name).columns}
     assert not cols & {"name", "national_id", "address", "phone", "email", "dob"}

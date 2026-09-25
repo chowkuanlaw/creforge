@@ -172,6 +172,38 @@ class Inquiries(_Model):
     withdrawn_share: Prob = 0.05
 
 
+class PartyRates(_Model):
+    """Share of a product's accounts that carry a joint borrower / a guarantor."""
+
+    joint: Prob = 0.0
+    guarantor: Prob = 0.0
+
+
+class Parties(_Model):
+    """Joint borrowers and guarantors (``account_party``)."""
+
+    enabled: bool = True
+    products: dict[str, PartyRates] = {}
+    joint_max_age_gap: Annotated[int, Field(ge=0, le=30)] = 8
+    guarantor_age_gap: tuple[int, int] = (20, 35)
+    guarantor_same_region: Prob = Field(0.7, description="Chance the guarantor lives in the same region")
+    guarantor_risky_grades: list[str] = ["D", "E"]
+    guarantor_risky_mult: Positive = Field(2.0, description="Guarantor rate multiplier, risky grades")
+    guarantor_young_age: Annotated[int, Field(ge=18, le=100)] = 25
+    guarantor_young_mult: Positive = Field(2.0, description="Guarantor rate multiplier, young borrowers")
+    guarantor_grade_weights: dict[str, NonNeg] = Field(
+        default_factory=dict, description="Relative odds of each grade being chosen as a guarantor"
+    )
+    guarantor_call: Prob = Field(0.15, description="Monthly chance a guarantor is called at 90+ DPD")
+
+    @model_validator(mode="after")
+    def _valid(self) -> Parties:
+        lo, hi = self.guarantor_age_gap
+        if not 0 < lo <= hi <= 60:
+            raise ValueError("guarantor_age_gap must satisfy 0 < min <= max <= 60")
+        return self
+
+
 class Target(_Model):
     dpd30_share: tuple[Prob, Prob]
     annual_writeoff_rate: tuple[Prob, Prob]
@@ -192,6 +224,7 @@ class Profile(_Model):
         6, description="Months spent in the 120+ bucket before write-off"
     )
     targets: dict[str, Target] = {}
+    parties: Parties = Parties(enabled=False)
 
     @model_validator(mode="after")
     def _valid(self) -> Profile:
@@ -209,6 +242,13 @@ class Profile(_Model):
         unknown = set(self.targets) - set(self.products)
         if unknown:
             raise ValueError(f"targets for unknown products: {sorted(unknown)}")
+        unknown = set(self.parties.products) - set(self.products)
+        if unknown:
+            raise ValueError(f"parties configured for unknown products: {sorted(unknown)}")
+        party_grades = set(self.parties.guarantor_risky_grades) | set(self.parties.guarantor_grade_weights)
+        unknown = party_grades - set(self.grades)
+        if unknown:
+            raise ValueError(f"parties reference unknown grades: {sorted(unknown)}")
         return self
 
 

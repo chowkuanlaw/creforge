@@ -11,7 +11,7 @@ def test_generate_then_validate(tmp_path):
     res = runner.invoke(main, ["generate", "-n", "800", "-m", "12", "-s", "3", "-o", str(out),
                                "--chunk-size", "400"])
     assert res.exit_code == 0, res.output
-    assert "account_month" in res.output
+    assert "account_month" in res.output and "account_party" in res.output
     res = runner.invoke(main, ["validate", str(out), "--json", "--report", str(tmp_path / "r.md")])
     assert res.exit_code == 0, res.output
     assert json.loads(res.output)["integrity_ok"] is True

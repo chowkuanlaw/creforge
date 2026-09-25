@@ -140,6 +140,29 @@ inquiries: {recent_window_months: 6, recent_penalty: 0.35, withdrawn_share: 0.05
 lenders: 40
 writeoff_after_months: 6
 
+# Joint borrowers and guarantors (the `account_party` table).
+#   joint:     share of the product's accounts held with a co-borrower (a household:
+#              same region, similar age). The account's risk blends both borrowers.
+#   guarantor: share backed by a guarantor (typically a parent: 20-35 years older,
+#              better grade). More common for risky grades and young borrowers.
+#              Once the loan is 90+ DPD, the guarantor can be called each month and
+#              pays off the arrears.
+parties:
+  enabled: true
+  products:
+    mortgage:      {joint: 0.40, guarantor: 0.03}
+    auto_loan:     {joint: 0.10, guarantor: 0.08}
+    personal_loan: {joint: 0.05, guarantor: 0.12}
+  joint_max_age_gap: 8
+  guarantor_age_gap: [20, 35]
+  guarantor_same_region: 0.7
+  guarantor_risky_grades: [D, E]
+  guarantor_risky_mult: 2.0
+  guarantor_young_age: 25
+  guarantor_young_mult: 2.0
+  guarantor_grade_weights: {A: 4.0, B: 3.0, C: 2.0, D: 0.5, E: 0.25}
+  guarantor_call: 0.15
+
 # Calibration bands checked by `creforge validate`. Deliberately wide: they encode
 # "right order of magnitude for this product type", not a point estimate.
 #   dpd30_share:          share of open account-months at 30+ DPD

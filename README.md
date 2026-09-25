@@ -8,9 +8,10 @@
 **PII-safe synthetic credit bureau data, generated from explicit behavioural rules.**
 
 creforge generates realistic, linked credit-bureau-shaped datasets: borrowers, credit
-inquiries, accounts and monthly payment histories. The data has real delinquency
-dynamics, vintage curves and stress scenarios, and **no real data ever goes in**. There
-is no model fitted to real records, so there is nothing to memorise or leak.
+inquiries, accounts, the joint borrowers and guarantors on them, and monthly payment
+histories. The data has real delinquency dynamics, vintage curves and stress
+scenarios, and **no real data ever goes in**. There is no model fitted to real records,
+so there is nothing to memorise or leak.
 
 Use it to test credit data pipelines, demo dashboards, teach credit-risk analytics,
 benchmark warehouses, or give contractors and vendors a realistic dataset without a
@@ -41,6 +42,7 @@ $ creforge validate ./bureau --strict
 | `inquiry` | credit application | Approval odds fall as a borrower makes more applications ("credit hungry" behaviour). |
 | `account` | credit facility | `credit_card`, `personal_loan`, `mortgage`, `auto_loan`, `overdraft`, `bnpl`. New accounts link to their approved inquiry. Older accounts start part-way through their life. |
 | `account_month` | account × month | Balance, amount due, amount paid, DPD bucket (`0` … `120+`), months in arrears, status. |
+| `account_party` | person on an account | Role `primary`, `joint` or `guarantor`. About 40% of mortgages are joint; personal and auto loans to risky or young borrowers often have a guarantor (typically an older relative with a better grade). |
 
 Output is one Parquet or CSV part file per chunk per table, plus a `manifest.json`
 recording the version, seed, full resolved config and its SHA-256.
@@ -61,6 +63,10 @@ show a DPD that disagrees with its arrears. Accounts that already exist when the
 opens start in a state drawn from the model's own age-conditional distribution, so the
 first month shows no warm-up artefact.
 
+Joint accounts blend both borrowers' risk. Guaranteed loans that reach 90+ DPD can be
+rescued when the guarantor is called and pays off the arrears, so fewer of them are
+written off.
+
 ## Validation
 
 `creforge validate` reports:
@@ -68,24 +74,28 @@ first month shows no warm-up artefact.
 - **Integrity** (hard guarantees; any failure is a bug): unique ids, every foreign key
   resolves, the account opens on or after its approved inquiry, month histories are
   contiguous and end at closure, no rows after write-off, no skipped buckets, no
-  payment on a roll-forward, no negative amounts.
+  payment on a roll-forward, no negative amounts, exactly one primary borrower per
+  account, and no person listed twice on the same account.
 - **Calibration** (against the profile's `targets`): 30+ DPD share and annual
   write-off rate per product; 12-month bad rate increasing across grades; the seasoning
-  peak falls at 6–35 months on book; no artefact at the start of the window.
+  peak falls at 6–35 months on book; no artefact at the start of the window; joint
+  accounts go bad less often and guaranteed loans are written off less often than
+  comparable single-borrower accounts; guarantors have better grades than the borrowers
+  they back.
 - **Privacy statement**, with the config hash, to attach to data-handling approvals.
 
-Baseline, 50k subjects × 36 months:
+Baseline, 50k subjects × 36 months, seed 11 (creforge 0.2):
 
 | Product | 30+ DPD share | Annual write-off rate |
 |---|---|---|
 | credit_card | 3.9% | 3.7% |
-| personal_loan | 4.6% | 3.8% |
-| mortgage | 1.1% | 0.4% |
-| auto_loan | 3.1% | 2.2% |
-| overdraft | 2.9% | 2.5% |
-| bnpl | 6.3% | 0.8% |
+| personal_loan | 4.4% | 3.4% |
+| mortgage | 1.0% | 0.4% |
+| auto_loan | 3.0% | 2.1% |
+| overdraft | 2.8% | 2.5% |
+| bnpl | 6.5% | 0.8% |
 
-12-month bad rate by grade: A 0.03% · B 0.5% · C 1.2% · D 6.7% · E 18%.
+12-month bad rate by grade: A 0.05% · B 0.4% · C 1.4% · D 6.5% · E 17%.
 
 ## Quickstart notebook
 
@@ -136,15 +146,15 @@ measure your own machine.
 
 ## Roadmap
 
-1. **v1.1:** guarantor and joint-account links (`account_party`), including
-   contingent liabilities.
-2. Business subjects, directors and shareholding graphs.
-3. Collateral and legal/litigation records.
-4. Clearly marked synthetic PII for UI testing.
-5. Calibration to *published aggregate* statistics.
-6. Scripted scenarios (moratoria, rate shocks).
-7. DuckDB/Postgres/Iceberg loaders; dbt and Glue catalog integration.
-8. Country flavour packs built only from public specifications.
+1. ~~Guarantor and joint-account links~~: done in 0.2.
+2. Contagion: a called guarantee raising the guarantor's own risk; supplementary cards.
+3. Business subjects, directors and shareholding graphs.
+4. Collateral and legal/litigation records.
+5. Clearly marked synthetic PII for UI testing.
+6. Calibration to *published aggregate* statistics.
+7. Scripted scenarios (moratoria, rate shocks).
+8. DuckDB/Postgres/Iceberg loaders; dbt and Glue catalog integration.
+9. Country flavour packs built only from public specifications.
 
 ## Contributing
 

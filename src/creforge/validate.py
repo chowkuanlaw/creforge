@@ -108,6 +108,7 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
     grade_acc: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     age_acc: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     month_acc: dict[int, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    party = _PartyAcc()
 
     dpd_index = {b: i for i, b in enumerate(DPD_BUCKETS)}
     for ch in data.iter_chunks():
@@ -201,9 +202,10 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
             (pl.col("m") >= 1) & (pl.col("m") <= BAD_HORIZON)
             & ((pl.col("dpd") >= DPD90) | (pl.col("status") == "written_off"))
         ).select("account_id").unique()
-        for r in cohort.with_columns(
-            pl.col("account_id").is_in(bad["account_id"].implode()).alias("bad")
-        ).group_by("grade").agg(pl.len().alias("n"), pl.col("bad").sum()).iter_rows(named=True):
+        cohort = cohort.with_columns(pl.col("account_id").is_in(bad["account_id"].implode()).alias("bad"))
+        for r in cohort.group_by("grade").agg(pl.len().alias("n"), pl.col("bad").sum()).iter_rows(
+            named=True
+        ):
             grade_acc[r["grade"]]["accounts"] += r["n"]
             grade_acc[r["grade"]]["bad"] += r["bad"]
 
@@ -222,6 +224,11 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
             month_acc[r["m"]]["rows"] += r["rows"]
             month_acc[r["m"]]["dpd30"] += r["dpd30"]
 
+        if "account_party" in ch:
+            counts["account_party"] += ch["account_party"].height
+            written_off = h.filter(pl.col("status") == "written_off").select("account_id").unique()
+            party.add_chunk(cfg, ch["account_party"], s, a, grades, cohort, written_off, viol)
+
     report = Report(config_sha256=cfg.sha256(), profile=cfg.profile.name, row_counts=dict(counts))
     for table, series in ids.items():
         col = pl.concat(series)
@@ -233,9 +240,135 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
                  "dpd_skips_bucket", "paid_while_rolling", "negative_amounts",
                  "delinquent_without_due"):
         report.checks.append(Check(name, "integrity", viol[name] == 0, f"{viol[name]} violations"))
+    party.checks(report, viol)
 
     _calibration(report, cfg, prod_acc, grade_acc, age_acc, month_acc)
     return report
+
+
+PARTY_INTEGRITY = ("fk_party_subject", "fk_party_account", "party_primary_mismatch",
+                   "party_role_counts", "party_product_not_allowed", "party_start_date")
+
+
+class _PartyAcc:
+    """Accumulates account_party integrity violations and calibration cells across chunks."""
+
+    def __init__(self) -> None:
+        self.seen = False
+        # (flag, product, grade) -> [accounts, events]
+        self.joint: dict[tuple, list[int]] = defaultdict(lambda: [0, 0])
+        self.guar: dict[tuple, list[int]] = defaultdict(lambda: [0, 0])
+        self.grade_sum = {"primary": 0, "guarantor": 0}
+        self.grade_n = 0
+
+    def add_chunk(self, cfg, ap, s, a, grades, cohort, written_off, viol) -> None:
+        self.seen = True
+        rules = cfg.profile.parties.products
+        allow_joint = [p for p, r in rules.items() if r.joint > 0]
+        allow_guar = [p for p, r in rules.items() if r.guarantor > 0]
+        ap = ap.with_columns(pl.col("role").cast(pl.String))
+        acc = a.select("account_id", "subject_id", "open_date",
+                       pl.col("product_type").cast(pl.String).alias("product"))
+
+        viol["fk_party_subject"] += ap.join(s, on="subject_id", how="anti").height
+        viol["fk_party_account"] += ap.join(a, on="account_id", how="anti").height
+        primary = ap.filter(pl.col("role") == "primary").select(
+            "account_id", pl.col("subject_id").alias("p_subject"))
+        viol["party_primary_mismatch"] += acc.join(primary, on="account_id", how="left").filter(
+            pl.col("p_subject").is_null() | (pl.col("p_subject") != pl.col("subject_id"))
+        ).height
+        per_acc = ap.group_by("account_id").agg(
+            (pl.col("role") == "primary").sum().alias("n_primary"),
+            (pl.col("role") == "joint").sum().alias("n_joint"),
+            (pl.col("role") == "guarantor").sum().alias("n_guarantor"),
+            pl.col("subject_id").n_unique().alias("n_people"),
+            pl.len().alias("n"),
+        )
+        viol["party_role_counts"] += per_acc.filter(
+            (pl.col("n_primary") != 1) | (pl.col("n_joint") > 1) | (pl.col("n_guarantor") > 1)
+            | (pl.col("n_people") != pl.col("n"))
+        ).height
+        linked = ap.join(acc, on="account_id")
+        viol["party_product_not_allowed"] += linked.filter(
+            ((pl.col("role") == "joint") & ~pl.col("product").is_in(allow_joint))
+            | ((pl.col("role") == "guarantor") & ~pl.col("product").is_in(allow_guar))
+        ).height
+        viol["party_start_date"] += linked.filter(pl.col("start_date") != pl.col("open_date")).height
+
+        # Calibration cells, standardised later by product x primary grade.
+        flags = acc.join(grades, on="subject_id").join(
+            per_acc.select("account_id", (pl.col("n_joint") > 0).alias("joint"),
+                           (pl.col("n_guarantor") > 0).alias("guar")),
+            on="account_id", how="left",
+        )
+        jc = cohort.select("account_id", "bad").join(flags, on="account_id").filter(
+            pl.col("product").is_in(allow_joint))
+        for r in jc.group_by("joint", "product", "grade").agg(pl.len(), pl.col("bad").sum()).iter_rows():
+            cell = self.joint[(r[0], r[1], r[2])]
+            cell[0] += r[3]
+            cell[1] += r[4]
+        gc = flags.filter(pl.col("product").is_in(allow_guar)).with_columns(
+            pl.col("account_id").is_in(written_off["account_id"].implode()).alias("wo"))
+        for r in gc.group_by("guar", "product", "grade").agg(pl.len(), pl.col("wo").sum()).iter_rows():
+            cell = self.guar[(r[0], r[1], r[2])]
+            cell[0] += r[3]
+            cell[1] += r[4]
+
+        rank = {g: i for i, g in enumerate(cfg.profile.grades)}
+        gi = grades.with_columns(pl.col("grade").replace_strict(rank, return_dtype=pl.Int32).alias("gi"))
+        pairs = ap.filter(pl.col("role") == "guarantor").select("account_id", "subject_id").join(
+            gi.select("subject_id", pl.col("gi").alias("g_gi")), on="subject_id"
+        ).join(primary, on="account_id").join(
+            gi.select(pl.col("subject_id").alias("p_subject"), pl.col("gi").alias("p_gi")), on="p_subject")
+        self.grade_sum["guarantor"] += int(pairs["g_gi"].sum() or 0)
+        self.grade_sum["primary"] += int(pairs["p_gi"].sum() or 0)
+        self.grade_n += pairs.height
+
+    @staticmethod
+    def _standardised(cells: dict) -> tuple[int, int, float]:
+        """Observed events in the flagged group vs events expected at the unflagged group's rates."""
+        n = obs = 0
+        exp = 0.0
+        for (flag, product, grade), (count, events) in cells.items():
+            if not flag:
+                continue
+            base = cells.get((False, product, grade))
+            if not base or base[0] < 50:
+                continue
+            n += count
+            obs += events
+            exp += count * base[1] / base[0]
+        return n, obs, exp
+
+    def checks(self, report, viol) -> None:
+        if not self.seen:
+            for name in PARTY_INTEGRITY:
+                report.checks.append(Check(name, "integrity", None, "no account_party table"))
+            return
+        for name in PARTY_INTEGRITY:
+            report.checks.append(Check(name, "integrity", viol[name] == 0, f"{viol[name]} violations"))
+
+        metrics = {}
+        for key, cells, label in (("joint", self.joint, "12-month bad rate"),
+                                  ("guarantor", self.guar, "write-off rate")):
+            n, obs, exp = self._standardised(cells)
+            metrics[key] = {"accounts": n, "observed": obs, "expected_if_single": round(exp, 1)}
+            name = ("joint_accounts_lower_risk" if key == "joint" else "guaranteed_accounts_lower_writeoff")
+            if exp < MIN_EVENTS:
+                report.checks.append(Check(name, "calibration", None, "too few events to judge"))
+            else:
+                ratio = obs / exp
+                report.checks.append(Check(
+                    name, "calibration", ratio < 1.0,
+                    f"{label} is {ratio:.2f}x comparable single-borrower accounts ({obs} vs {exp:.0f})"))
+        if self.grade_n:
+            g = self.grade_sum["guarantor"] / self.grade_n
+            p = self.grade_sum["primary"] / self.grade_n
+            metrics["guarantor_grade_index"] = {"guarantors": round(g, 2), "primaries": round(p, 2)}
+            report.checks.append(Check(
+                "guarantors_better_grade", "calibration", g < p,
+                f"mean grade index {g:.2f} for guarantors vs {p:.2f} for the primaries they back"))
+        report.metrics["parties"] = metrics
 
 
 def _month_index(col: pl.Expr, start: pl.Expr) -> pl.Expr:

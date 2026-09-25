@@ -61,6 +61,7 @@ class Tables:
     g_transactor: np.ndarray
     writeoff_after: int
     seasoning: object = field(repr=False)
+    guarantor_call: float = 0.0
 
     @classmethod
     def from_profile(cls, prof: Profile) -> Tables:
@@ -94,23 +95,29 @@ class Tables:
             g_transactor=np.array([x.transactor_share for x in g]),
             writeoff_after=prof.writeoff_after_months,
             seasoning=prof.seasoning,
+            guarantor_call=prof.parties.guarantor_call if prof.parties.enabled else 0.0,
         )
 
 
 def event_probs(
     t: Tables,
     prod: np.ndarray,
-    grade: np.ndarray,
+    roll_mult: np.ndarray,
+    cure_mult: np.ndarray,
     state: np.ndarray,
     age: np.ndarray,
     macro: float | np.ndarray,
     can_roll: np.ndarray | bool = True,
 ) -> np.ndarray:
-    """Probabilities of (roll, cure, back, restructure, close); stay is the remainder."""
+    """Probabilities of (roll, cure, back, restructure, close); stay is the remainder.
+
+    ``roll_mult`` / ``cure_mult`` are per-account risk multipliers: the grade's values for
+    a single borrower, or a blend of both borrowers' values for a joint account.
+    """
     macro = np.asarray(macro, dtype=np.float64)
-    roll = t.roll[prod, state] * t.g_roll[grade] * t.seasoning.curve(age) * macro
+    roll = t.roll[prod, state] * roll_mult * t.seasoning.curve(age) * macro
     roll = np.where(can_roll, roll, 0.0)
-    good = t.g_cure[grade] / macro
+    good = cure_mult / macro
     p = np.stack(
         [roll, t.cure[prod, state] * good, t.back[prod, state] * good, t.rs[prod, state],
          t.close[prod, state]],
@@ -150,7 +157,7 @@ class Book:
     """Mutable per-account simulation state for one chunk."""
 
     product: np.ndarray  # int16
-    grade: np.ndarray  # int8
+    grade: np.ndarray  # int8, primary borrower's grade
     open_abs: np.ndarray  # int32 window month of opening (negative: before window)
     limit: np.ndarray  # float64 (revolving) else 0
     principal: np.ndarray  # float64 (installment) else 0
@@ -165,6 +172,9 @@ class Book:
     active: np.ndarray  # bool
     close_month: np.ndarray  # int32, -1 while open
     close_reason: np.ndarray  # int8, -1 while open
+    roll_mult: np.ndarray  # float64 risk multipliers (grade, or joint blend)
+    cure_mult: np.ndarray
+    guaranteed: np.ndarray  # bool: a guarantor can be called at 90+ DPD
 
     @property
     def size(self) -> int:
@@ -228,8 +238,14 @@ def step(t: Tables, book: Book, idx: np.ndarray, month: int, macro: float, rng) 
     u_transactor = rng.random(n)
     u_payfrac = rng.random(n)
 
-    probs = event_probs(t, prod, grade, s, age, macro, can_roll=inst > 0)
+    u_call = rng.random(n)
+
+    probs = event_probs(t, prod, book.roll_mult[idx], book.cure_mult[idx], s, age, macro,
+                        can_roll=inst > 0)
     ev = (u_event[:, None] >= probs.cumsum(axis=1)).sum(axis=1)
+    # A guarantor called at 90+ DPD pays off the arrears: the account cures.
+    called = book.guaranteed[idx] & (s >= D4) & (s <= D5) & (u_call < t.guarantor_call)
+    ev[called] = EV_CURE
 
     is_roll, is_cure, is_back = ev == EV_ROLL, ev == EV_CURE, ev == EV_BACK
     is_rs, is_close, is_stay = ev == EV_RS, ev == EV_CLOSE, ev == EV_STAY
@@ -367,7 +383,7 @@ def initial_state_table(t: Tables, max_age: int) -> np.ndarray:
     rows = np.arange(len(ss))
     for a in range(max_age + 1):
         out[:, :, a] = v / np.maximum(v.sum(axis=2, keepdims=True), 1e-300)
-        p = event_probs(t, pp, gg, ss, np.full(len(ss), a), 1.0)
+        p = event_probs(t, pp, t.g_roll[gg], t.g_cure[gg], ss, np.full(len(ss), a), 1.0)
         stay = 1.0 - p.sum(axis=1)
         q = np.zeros((len(ss), N_TRANSIENT))
         np.add.at(q, (rows, dest_roll), p[:, EV_ROLL])
