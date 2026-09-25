@@ -259,6 +259,9 @@ class Config(_Model):
     seed: Annotated[int, Field(ge=0)] = 0
     start_month: str = "2023-01"
     chunk_size: Annotated[int, Field(ge=1)] = 50_000
+    money: Literal["float", "decimal"] = Field(
+        "float", description="Money columns as Float64 (rounded to 2 dp) or exact Decimal(18, 2)"
+    )
 
     @field_validator("start_month")
     @classmethod

@@ -14,6 +14,14 @@ from .config import Config, Profile
 from .ids import make_ids
 
 TABLES = ("subject", "inquiry", "account", "account_month", "account_party")
+# Bumped whenever a table, column, type or allowed value changes. 1: creforge 0.1; 2: 0.2+.
+SCHEMA_VERSION = 2
+MONEY_COLUMNS = {
+    "inquiry": ("requested_amount",),
+    "account": ("credit_limit", "principal"),
+    "account_month": ("balance", "amount_due", "amount_paid"),
+}
+MONEY_DECIMAL = pl.Decimal(precision=18, scale=2)
 OUTCOMES = ("approved", "declined", "withdrawn")
 MAX_PRE_WINDOW_AGE = 240
 MIN_BORROWER_AGE = 18
@@ -292,8 +300,17 @@ def _simulate(ctx: Context, book: E.Book, rng) -> E.Rows:
 # --- frames --------------------------------------------------------------------------
 
 
-def _enum(values, categories) -> pl.Series:
-    return pl.Series(np.asarray(categories, dtype=object)[values]).cast(pl.Enum(list(categories)))
+def _null_where(values: pl.Series, mask: np.ndarray) -> pl.Series:
+    """``values`` with nulls where ``mask`` is true (portable across Polars 1.x)."""
+    frame = pl.DataFrame({"v": values, "m": mask})
+    return frame.select(pl.when(pl.col("m")).then(None).otherwise(pl.col("v")).alias(values.name)).to_series()
+
+
+def _enum(values, categories, null_mask: np.ndarray | None = None) -> pl.Series:
+    labels = np.asarray(categories, dtype=object)[values]
+    if null_mask is not None:
+        labels[null_mask] = None
+    return pl.Series(labels.tolist(), dtype=pl.String).cast(pl.Enum(list(categories)))
 
 
 def generate_chunk(cfg: Config, chunk: int, ctx: Context | None = None) -> dict[str, pl.DataFrame]:
@@ -395,11 +412,11 @@ def generate_chunk(cfg: Config, chunk: int, ctx: Context | None = None) -> dict[
         "open_date": open_date,
         "credit_limit": pl.Series(np.where(rev, acc_amount, np.nan)).fill_nan(None),
         "principal": pl.Series(np.where(rev, np.nan, acc_amount)).fill_nan(None),
-        "tenor_months": pl.Series(tenor, dtype=pl.Int16).set(pl.Series(rev), None),
+        "tenor_months": _null_where(pl.Series(tenor, dtype=pl.Int16), rev),
         "interest_rate": acc_rate,
         "secured": secured,
-        "close_date": pl.Series(close_date).set(pl.Series(~closed), None),
-        "close_reason": _enum(reason, E.CLOSE_REASONS).set(pl.Series(~closed), None),
+        "close_date": _null_where(pl.Series(close_date), ~closed),
+        "close_reason": _enum(reason, E.CLOSE_REASONS, null_mask=~closed),
     })
 
     account_month = pl.DataFrame({
@@ -429,5 +446,9 @@ def generate_chunk(cfg: Config, chunk: int, ctx: Context | None = None) -> dict[
         "role": _enum(p_role, P.ROLES),
         "start_date": open_date[p_acc],
     })
-    return {"subject": subject, "inquiry": inquiry, "account": account, "account_month": account_month,
-            "account_party": account_party}
+    frames = {"subject": subject, "inquiry": inquiry, "account": account, "account_month": account_month,
+              "account_party": account_party}
+    if cfg.money == "decimal":
+        for table, cols in MONEY_COLUMNS.items():
+            frames[table] = frames[table].with_columns(pl.col(c).round(2).cast(MONEY_DECIMAL) for c in cols)
+    return frames

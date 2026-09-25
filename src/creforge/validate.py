@@ -202,7 +202,7 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
             (pl.col("m") >= 1) & (pl.col("m") <= BAD_HORIZON)
             & ((pl.col("dpd") >= DPD90) | (pl.col("status") == "written_off"))
         ).select("account_id").unique()
-        cohort = cohort.with_columns(pl.col("account_id").is_in(bad["account_id"].implode()).alias("bad"))
+        cohort = _flag(cohort, bad, "bad")
         for r in cohort.group_by("grade").agg(pl.len().alias("n"), pl.col("bad").sum()).iter_rows(
             named=True
         ):
@@ -307,8 +307,7 @@ class _PartyAcc:
             cell = self.joint[(r[0], r[1], r[2])]
             cell[0] += r[3]
             cell[1] += r[4]
-        gc = flags.filter(pl.col("product").is_in(allow_guar)).with_columns(
-            pl.col("account_id").is_in(written_off["account_id"].implode()).alias("wo"))
+        gc = _flag(flags.filter(pl.col("product").is_in(allow_guar)), written_off, "wo")
         for r in gc.group_by("guar", "product", "grade").agg(pl.len(), pl.col("wo").sum()).iter_rows():
             cell = self.guar[(r[0], r[1], r[2])]
             cell[0] += r[3]
@@ -369,6 +368,12 @@ class _PartyAcc:
                 "guarantors_better_grade", "calibration", g < p,
                 f"mean grade index {g:.2f} for guarantors vs {p:.2f} for the primaries they back"))
         report.metrics["parties"] = metrics
+
+
+def _flag(df: pl.DataFrame, ids: pl.DataFrame, name: str) -> pl.DataFrame:
+    """Add boolean column ``name``: whether the row's account_id appears in ``ids``."""
+    marks = ids.select("account_id").unique().with_columns(pl.lit(True).alias(name))
+    return df.join(marks, on="account_id", how="left").with_columns(pl.col(name).fill_null(False))
 
 
 def _month_index(col: pl.Expr, start: pl.Expr) -> pl.Expr:

@@ -45,7 +45,14 @@ $ creforge validate ./bureau --strict
 | `account_party` | person on an account | Role `primary`, `joint` or `guarantor`. About 40% of mortgages are joint; personal and auto loans to risky or young borrowers often have a guarantor (typically an older relative with a better grade). |
 
 Output is one Parquet or CSV part file per chunk per table, plus a `manifest.json`
-recording the version, seed, full resolved config and its SHA-256.
+recording the version, schema version, seed, full resolved config and its SHA-256.
+Money columns are Float64 rounded to 2 decimal places, or exact `Decimal(18, 2)` with
+`--money decimal`.
+
+Every column, type and allowed value is documented in the
+[data dictionary](docs/data-dictionary.md). What stays stable between versions (the
+schema, same seed → same data, the Python API and the CLI) is set out in
+[docs/stability.md](docs/stability.md).
 
 ## How it works
 
@@ -114,6 +121,8 @@ report = cf.validate(ds)
 print(report.to_markdown())
 
 cf.write_dataset(cfg, "out/", workers=4)   # streaming, bounded memory, for big runs
+
+exact = cf.Config.from_profile("baseline", subjects=10_000, money="decimal")  # Decimal(18, 2)
 ```
 
 ## Profiles

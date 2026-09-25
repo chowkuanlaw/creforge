@@ -238,8 +238,9 @@ example, rows that don't sum to 1) fail fast with a clear message. v1 ships the
 - **CI:** GitHub Actions on Linux, macOS and **Windows**, Python 3.10–3.13.
 - **License:** Apache-2.0.
 
-Money columns are Float64 rounded to 2 dp. A Parquet `DECIMAL` type is on the
-roadmap: in Polars it currently costs noticeable throughput.
+Money columns are Float64 rounded to 2 dp by default. Since 0.3, `money: decimal`
+writes exact `Decimal(18, 2)` columns instead. Measured at 100k subjects, it had no
+noticeable effect on speed, which contradicts the assumption made in v1.
 
 ## 9. Out of scope for v1 (roadmap)
 

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 import yaml
+from pydantic import ValidationError
 
 from . import __version__
 from .config import Config, list_profiles, load_profile
@@ -16,7 +17,19 @@ from .dataset import write_dataset
 from .validate import validate
 
 
-@click.group()
+class _Group(click.Group):
+    """Turn expected user errors into a one-line message instead of a traceback."""
+
+    def invoke(self, ctx):
+        try:
+            return super().invoke(ctx)
+        except ValidationError as exc:
+            raise click.ClickException(f"invalid configuration:\n{exc}") from exc
+        except (FileNotFoundError, ValueError) as exc:
+            raise click.ClickException(str(exc)) from exc
+
+
+@click.group(cls=_Group)
 @click.version_option(__version__, prog_name="creforge")
 def main() -> None:
     """PII-safe synthetic credit bureau data from explicit behavioural rules."""
@@ -34,10 +47,12 @@ def main() -> None:
               show_default=True)
 @click.option("--workers", "-w", type=click.IntRange(min=1), default=1, show_default=True)
 @click.option("--chunk-size", type=click.IntRange(min=1), default=50_000, show_default=True)
-def generate(profile, subjects, months, seed, start_month, out, fmt, workers, chunk_size) -> None:
+@click.option("--money", type=click.Choice(["float", "decimal"]), default="float", show_default=True,
+              help="Money columns as Float64 (2 dp) or exact Decimal(18, 2).")
+def generate(profile, subjects, months, seed, start_month, out, fmt, workers, chunk_size, money) -> None:
     """Generate a dataset into OUT (one part file per chunk, plus manifest.json)."""
     cfg = Config.from_profile(profile, subjects=subjects, months=months, seed=seed,
-                              start_month=start_month, chunk_size=chunk_size)
+                              start_month=start_month, chunk_size=chunk_size, money=money)
     t0 = time.perf_counter()
     manifest = write_dataset(cfg, out, format=fmt, workers=workers)
     secs = time.perf_counter() - t0

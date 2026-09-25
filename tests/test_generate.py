@@ -89,3 +89,22 @@ def test_manifest(tmp_path, small_config):
     assert manifest["config_sha256"] == small_config.sha256()
     assert manifest["row_counts"]["subject"] == 3000
     assert cf.DiskDataset.open(tmp_path).config == small_config
+
+
+def test_decimal_money_roundtrip(tmp_path):
+    from decimal import Decimal
+
+    cfg = cf.Config.from_profile("baseline", subjects=800, months=12, seed=4, money="decimal")
+    manifest = cf.write_dataset(cfg, tmp_path)
+    assert manifest["config"]["money"] == "decimal"
+    am = pl.concat([c["account_month"] for c in cf.DiskDataset.open(tmp_path).iter_chunks()])
+    assert am.schema["balance"] == pl.Decimal(precision=18, scale=2)
+    assert isinstance(am["balance"][0], Decimal)
+    assert cf.validate(tmp_path).integrity_ok
+
+
+def test_manifest_schema_version(tmp_path):
+    from creforge.generator import SCHEMA_VERSION
+
+    manifest = cf.write_dataset(cf.Config.from_profile("baseline", subjects=100, months=12), tmp_path)
+    assert manifest["schema_version"] == SCHEMA_VERSION

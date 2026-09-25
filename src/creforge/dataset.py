@@ -14,7 +14,7 @@ import polars as pl
 
 from . import __version__
 from .config import Config
-from .generator import TABLES, generate_chunk, make_context
+from .generator import SCHEMA_VERSION, TABLES, generate_chunk, make_context
 
 Format = Literal["parquet", "csv"]
 MANIFEST = "manifest.json"
@@ -116,6 +116,7 @@ def _write_manifest(out: Path, config: Config, format: Format, counts: list[dict
     out.mkdir(parents=True, exist_ok=True)
     manifest = {
         "creforge_version": __version__,
+        "schema_version": SCHEMA_VERSION,
         "format": format,
         "chunks": config.n_chunks,
         "config_sha256": config.sha256(),
@@ -137,7 +138,10 @@ class DiskDataset:
     @classmethod
     def open(cls, path: str | Path) -> DiskDataset:
         path = Path(path)
-        return cls(path, json.loads((path / MANIFEST).read_text(encoding="utf-8")))
+        manifest = path / MANIFEST
+        if not manifest.is_file():
+            raise FileNotFoundError(f"{path} is not a creforge dataset (no {MANIFEST} found)")
+        return cls(path, json.loads(manifest.read_text(encoding="utf-8")))
 
     @property
     def config(self) -> Config:
@@ -165,7 +169,7 @@ _CSV_TYPES: dict[str, pl.DataType] = {
 def _read(path: Path, fmt: str) -> pl.DataFrame:
     if fmt == "parquet":
         return pl.read_parquet(path)
-    df = pl.read_csv(path, infer_schema=False)
+    df = pl.read_csv(path, infer_schema_length=0)  # every column as text
     def restore(c: str, t: pl.DataType) -> pl.Expr:
         if t == pl.Date():
             return pl.col(c).str.to_date()

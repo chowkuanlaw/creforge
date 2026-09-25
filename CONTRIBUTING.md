@@ -30,7 +30,9 @@ $ pytest -m "not slow"      # fast suite, a few seconds
 $ pytest -m slow            # calibration suite, ~20 seconds
 ```
 
-CI runs both suites on Linux, macOS and Windows with Python 3.10–3.13.
+CI runs both suites on Linux, macOS and Windows with Python 3.10–3.13, plus a job with
+the oldest dependency versions we support (`ci/min-constraints.txt`) and a 95% coverage
+gate. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## What makes a good pull request
 
@@ -40,8 +42,10 @@ CI runs both suites on Linux, macOS and Windows with Python 3.10–3.13.
   is a generator bug. Never loosen an integrity check to make a test pass.
 - **Calibration changes** (profile numbers or target bands) must say which public
   source motivates them, and must keep `pytest -m slow` green.
-- **Output schema changes** (columns, types, enum values) go in `CHANGELOG.md` under
-  **Changed**, because downstream users' pipelines depend on the schema.
+- **Output schema changes** (columns, types, enum values) must update
+  [docs/data-dictionary.md](docs/data-dictionary.md), bump `SCHEMA_VERSION`, and go in
+  `CHANGELOG.md` under **Changed**. See [docs/stability.md](docs/stability.md) for what
+  each kind of version may change.
 - Match the existing style; `ruff check .` must pass.
 
 ## Proposing a new profile

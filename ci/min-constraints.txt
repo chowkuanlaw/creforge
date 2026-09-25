@@ -1,0 +1,8 @@
+# Oldest runtime dependency versions creforge claims to support (see pyproject.toml).
+# The "min-deps" CI job installs exactly these to keep that claim honest.
+numpy==1.26.0
+polars==1.0.0
+pyarrow==14.0.0
+pydantic==2.5.0
+pyyaml==6.0.1
+click==8.1.0

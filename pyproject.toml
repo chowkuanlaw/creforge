@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creforge"
-version = "0.2.0"
+version = "0.3.0"
 description = "PII-safe synthetic credit bureau data from explicit behavioural rules."
 readme = "README.md"
 license = "Apache-2.0"
@@ -30,12 +30,12 @@ dependencies = [
   "polars>=1.0",
   "pyarrow>=14",
   "pydantic>=2.5",
-  "pyyaml>=6",
+  "pyyaml>=6.0.1",
   "click>=8.1",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "hypothesis>=6.100", "ruff>=0.5"]
+dev = ["pytest>=8", "pytest-cov>=5", "hypothesis>=6.100", "ruff>=0.5"]
 examples = ["matplotlib>=3.7", "jupyter"]
 
 [project.scripts]

@@ -28,3 +28,31 @@ def test_profiles_commands():
 def test_rejects_bad_months():
     res = CliRunner().invoke(main, ["generate", "-m", "6", "-o", "x"])
     assert res.exit_code != 0
+
+
+def test_friendly_error_for_non_dataset(tmp_path):
+    res = CliRunner().invoke(main, ["validate", str(tmp_path)])
+    assert res.exit_code == 1
+    assert "is not a creforge dataset" in res.output
+    assert "Traceback" not in res.output
+
+
+def test_friendly_error_for_unknown_profile(tmp_path):
+    res = CliRunner().invoke(main, ["generate", "-p", "nope", "-o", str(tmp_path / "o")])
+    assert res.exit_code == 1
+    assert "unknown profile" in res.output
+
+
+def test_friendly_error_for_invalid_profile(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("extends: baseline\nlenders: 0\n")
+    res = CliRunner().invoke(main, ["generate", "-p", str(bad), "-o", str(tmp_path / "o")])
+    assert res.exit_code == 1
+    assert "invalid configuration" in res.output
+
+
+def test_decimal_flag(tmp_path):
+    res = CliRunner().invoke(main, ["generate", "-n", "200", "-m", "12", "--money", "decimal",
+                                    "-o", str(tmp_path)])
+    assert res.exit_code == 0, res.output
+    assert json.loads((tmp_path / "manifest.json").read_text())["config"]["money"] == "decimal"
