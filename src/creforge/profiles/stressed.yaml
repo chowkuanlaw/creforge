@@ -1,0 +1,20 @@
+# creforge built-in profile: stressed
+# Baseline population and products under a recession-shaped macro path: roll rates
+# ramp up from month 9, peak at 1.8x around month 15, and ease back to 1.2x by
+# month 33. ILLUSTRATIVE ONLY. See baseline.yaml.
+extends: baseline
+name: stressed
+description: >
+  Baseline population under a recession-shaped macro stress path.
+macro:
+  points: [[0, 1.0], [9, 1.0], [15, 1.8], [24, 1.6], [33, 1.2]]
+
+# Stress bands: roughly double the baseline upper bounds, averaged over a window that
+# includes both the downturn and the recovery.
+targets:
+  credit_card:   {dpd30_share: [0.030, 0.100], annual_writeoff_rate: [0.030, 0.120]}
+  personal_loan: {dpd30_share: [0.030, 0.120], annual_writeoff_rate: [0.020, 0.100]}
+  mortgage:      {dpd30_share: [0.008, 0.050], annual_writeoff_rate: [0.000, 0.015]}
+  auto_loan:     {dpd30_share: [0.020, 0.100], annual_writeoff_rate: [0.015, 0.080]}
+  overdraft:     {dpd30_share: [0.020, 0.100], annual_writeoff_rate: [0.015, 0.100]}
+  bnpl:          {dpd30_share: [0.040, 0.200], annual_writeoff_rate: [0.005, 0.060]}
