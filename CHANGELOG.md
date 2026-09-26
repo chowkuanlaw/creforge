@@ -7,6 +7,36 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-26
+
+### Changed
+- **Money columns default to exact `Decimal(18, 2)`** (schema version 3). Use
+  `--money float` / `Config(money="float")` for the previous Float64 columns. Measured
+  speed is unchanged.
+- **Calibration anchored to cited public sources** ([docs/calibration.md](docs/calibration.md)):
+  Federal Reserve delinquency and charge-off rates for cards, mortgages and other consumer
+  loans (FRED `DRCCLACBS`, `CORCCACBS`, `DRSFRMACBS`, `CORSFRMACBS`, `DROCLACBS`,
+  `COROCLACBS`), 2015–2026 for `baseline` and the 2008–2011 peaks for `stressed`. Target
+  bands and product behaviour were retuned to match: for example, card 30+ DPD went from
+  3.9% to 2.3% (reference 1.5–3.2%) and mortgage 30+ DPD from 1.0% to 2.1% (reference
+  1.7–6.2%). The same seed produces different data from 0.3.
+- **Write-off timing per product**, following the FFIEC Uniform Retail Credit
+  Classification policy: open-end credit (cards, overdrafts) and mortgages are written off
+  after 2 months at 120+ DPD (about 180 days past due), and closed-end credit after 1 month
+  (about 120–150 days). It was 6 months for every product, about 300 days past due.
+  New per-product setting `writeoff_after_months`. Side effect: guaranteed loans' write-off
+  advantage is smaller (about 0.6–0.85x comparable loans, from 0.44x), because installment
+  loans now reach write-off sooner and a guarantor has less time to be called.
+
+### Added
+- `docs/calibration.md`: sources, observed ranges vs creforge output, and caveats.
+- Code of conduct reports go through the repository's private reporting form, which is
+  also linked from the issue chooser.
+
+### Fixed
+- Reading a CSV dataset written with decimal money keeps the Decimal type. Empty CSV
+  fields read as null on older Polars.
+
 ## [0.3.0] - 2026-09-25
 
 Groundwork for 1.0: a written contract, and the claims in it checked by CI.
@@ -82,7 +112,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/chowkuanlaw/creforge/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/chowkuanlaw/creforge/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/chowkuanlaw/creforge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/chowkuanlaw/creforge/releases/tag/v0.1.0

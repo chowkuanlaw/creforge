@@ -108,3 +108,18 @@ def test_manifest_schema_version(tmp_path):
 
     manifest = cf.write_dataset(cf.Config.from_profile("baseline", subjects=100, months=12), tmp_path)
     assert manifest["schema_version"] == SCHEMA_VERSION
+
+
+def test_money_defaults_to_decimal_and_float_is_available(tmp_path):
+    base = dict(subjects=300, months=12, seed=2)
+    dec = cf.generate(cf.Config.from_profile("baseline", **base))
+    flt = cf.generate(cf.Config.from_profile("baseline", money="float", **base))
+    assert dec.account_month.schema["balance"] == pl.Decimal(precision=18, scale=2)
+    assert flt.account_month.schema["balance"] == pl.Float64
+
+
+def test_csv_keeps_decimal_money(tmp_path):
+    cfg = cf.Config.from_profile("baseline", subjects=300, months=12, seed=3)
+    cf.write_dataset(cfg, tmp_path, format="csv")
+    chunk = next(cf.DiskDataset.open(tmp_path).iter_chunks())
+    assert chunk["account_month"].schema["amount_paid"] == pl.Decimal(precision=18, scale=2)

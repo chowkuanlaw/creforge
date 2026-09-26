@@ -47,8 +47,8 @@ def main() -> None:
               show_default=True)
 @click.option("--workers", "-w", type=click.IntRange(min=1), default=1, show_default=True)
 @click.option("--chunk-size", type=click.IntRange(min=1), default=50_000, show_default=True)
-@click.option("--money", type=click.Choice(["float", "decimal"]), default="float", show_default=True,
-              help="Money columns as Float64 (2 dp) or exact Decimal(18, 2).")
+@click.option("--money", type=click.Choice(["decimal", "float"]), default="decimal", show_default=True,
+              help="Money columns as exact Decimal(18, 2) or Float64 (2 dp).")
 def generate(profile, subjects, months, seed, start_month, out, fmt, workers, chunk_size, money) -> None:
     """Generate a dataset into OUT (one part file per chunk, plus manifest.json)."""
     cfg = Config.from_profile(profile, subjects=subjects, months=months, seed=seed,

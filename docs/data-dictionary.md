@@ -1,6 +1,6 @@
 # Data dictionary
 
-This is the contract for creforge output, **schema version 2** (creforge 0.2 and
+This is the contract for creforge output, **schema version 3** (creforge 0.4 and
 later). `manifest.json` records the `schema_version` of every dataset. Any change to a
 table, column, type or allowed value bumps it and is listed in the
 [CHANGELOG](../CHANGELOG.md). See [stability.md](stability.md) for what is guaranteed.
@@ -9,8 +9,9 @@ Conventions:
 
 - **Ids** are 13 characters: a table prefix (`S`, `Q`, `A`) plus 12 Crockford-base32
   characters. They are unique within a dataset and change with the seed.
-- **Money** columns are `Float64` rounded to 2 decimal places by default, or exact
-  `Decimal(18, 2)` with `--money decimal`. Amounts are in an abstract currency unit.
+- **Money** columns are exact `Decimal(18, 2)` by default, or `Float64` rounded to 2
+  decimal places with `--money float`. Amounts are in an abstract currency unit.
+  (Schema version 2, creforge 0.2 to 0.3, defaulted to `Float64`.)
 - **Enums** are Polars `Enum` / Parquet dictionary strings. Values marked *(profile)*
   come from the profile, so a custom profile can change them.
 - **Dates** are calendar dates. `…_month` columns always hold the first day of the month.
@@ -98,7 +99,7 @@ One row per person on an account (added in schema version 2).
 | Key | Description |
 |---|---|
 | `creforge_version` | Version that wrote the dataset. |
-| `schema_version` | Schema version of the tables (this document describes version 2). |
+| `schema_version` | Schema version of the tables (this document describes version 3). |
 | `format` | `parquet` or `csv`. |
 | `chunks` | Number of part files per table (`<table>/part-00000.<format>`, …). |
 | `config_sha256` | Hash of the full configuration. Same hash and version means same data. |

@@ -46,8 +46,8 @@ $ creforge validate ./bureau --strict
 
 Output is one Parquet or CSV part file per chunk per table, plus a `manifest.json`
 recording the version, schema version, seed, full resolved config and its SHA-256.
-Money columns are Float64 rounded to 2 decimal places, or exact `Decimal(18, 2)` with
-`--money decimal`.
+Money columns are exact `Decimal(18, 2)`, or Float64 rounded to 2 decimal places with
+`--money float`.
 
 Every column, type and allowed value is documented in the
 [data dictionary](docs/data-dictionary.md). What stays stable between versions (the
@@ -91,18 +91,23 @@ written off.
   they back.
 - **Privacy statement**, with the config hash, to attach to data-handling approvals.
 
-Baseline, 50k subjects × 36 months, seed 11 (creforge 0.2):
+Baseline, 50k subjects × 36 months, seed 11 (creforge 0.4), next to the US commercial
+bank range for 2015–2026 that each target is set from:
 
-| Product | 30+ DPD share | Annual write-off rate |
-|---|---|---|
-| credit_card | 3.9% | 3.7% |
-| personal_loan | 4.4% | 3.4% |
-| mortgage | 1.0% | 0.4% |
-| auto_loan | 3.0% | 2.1% |
-| overdraft | 2.8% | 2.5% |
-| bnpl | 6.5% | 0.8% |
+| Product | 30+ DPD share | Reference range | Annual write-off rate | Reference range |
+|---|---|---|---|---|
+| credit_card | 2.3% | 1.5–3.2% | 3.9% | 1.6–4.7% |
+| personal_loan | 2.0% | 1.5–2.4% | 2.3% | 0.3–1.2% (banks only) |
+| mortgage | 2.1% | 1.7–6.2% | 0.2% | 0.0–0.3% |
+| auto_loan | 1.4% | 1.5–2.4% | 1.6% | 0.3–1.2% (banks only) |
+| overdraft | 1.8% | assumption | 3.0% | assumption |
+| bnpl | 6.5% | assumption | 1.0% | assumption |
 
-12-month bad rate by grade: A 0.05% · B 0.4% · C 1.4% · D 6.5% · E 17%.
+12-month bad rate by grade: A 0.03% · B 0.3% · C 0.9% · D 5.7% · E 16%.
+
+Sources, method and caveats are in [docs/calibration.md](docs/calibration.md). For
+example, personal and auto write-offs sit above the bank-only series on purpose, because
+that series excludes finance companies.
 
 ## Quickstart notebook
 
@@ -122,7 +127,7 @@ print(report.to_markdown())
 
 cf.write_dataset(cfg, "out/", workers=4)   # streaming, bounded memory, for big runs
 
-exact = cf.Config.from_profile("baseline", subjects=10_000, money="decimal")  # Decimal(18, 2)
+fast = cf.Config.from_profile("baseline", subjects=10_000, money="float")  # Float64 money columns
 ```
 
 ## Profiles
@@ -140,8 +145,10 @@ grades:
 ```
 
 All built-in parameters are **illustrative**. They are hand-set to land in the right
-order of magnitude compared with publicly published aggregate statistics (sources are
-cited in the YAML). They do not describe any real lender's or bureau's portfolio.
+order of magnitude compared with published aggregate statistics: Federal Reserve
+delinquency and charge-off rates, and the FFIEC write-off timing rules. Every source is
+cited in the YAML and in [docs/calibration.md](docs/calibration.md). They do not
+describe any real lender's or bureau's portfolio.
 
 ## Performance
 

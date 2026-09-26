@@ -9,12 +9,14 @@ description: >
 macro:
   points: [[0, 1.0], [9, 1.0], [15, 1.8], [24, 1.6], [33, 1.2]]
 
-# Stress bands: roughly double the baseline upper bounds, averaged over a window that
-# includes both the downturn and the recovery.
+# Stress bands: lower bound as baseline; upper bound at the 2008 to 2011 peak of the
+# same Federal Reserve series (cards 30+ 6.77%, charge-off 10.54%; mortgages 30+ 11.48%,
+# charge-off 2.80%; other consumer 30+ 3.66%, charge-off 3.36%), rounded up, with the
+# same non-bank allowance for auto and personal loans as the baseline.
 targets:
-  credit_card:   {dpd30_share: [0.030, 0.100], annual_writeoff_rate: [0.030, 0.120]}
-  personal_loan: {dpd30_share: [0.030, 0.120], annual_writeoff_rate: [0.020, 0.100]}
-  mortgage:      {dpd30_share: [0.008, 0.050], annual_writeoff_rate: [0.000, 0.015]}
-  auto_loan:     {dpd30_share: [0.020, 0.100], annual_writeoff_rate: [0.015, 0.080]}
-  overdraft:     {dpd30_share: [0.020, 0.100], annual_writeoff_rate: [0.015, 0.100]}
-  bnpl:          {dpd30_share: [0.040, 0.200], annual_writeoff_rate: [0.005, 0.060]}
+  credit_card:   {dpd30_share: [0.015, 0.070], annual_writeoff_rate: [0.015, 0.110]}
+  mortgage:      {dpd30_share: [0.012, 0.120], annual_writeoff_rate: [0.000, 0.030]}
+  personal_loan: {dpd30_share: [0.012, 0.060], annual_writeoff_rate: [0.003, 0.060]}
+  auto_loan:     {dpd30_share: [0.012, 0.060], annual_writeoff_rate: [0.003, 0.060]}
+  overdraft:     {dpd30_share: [0.010, 0.070], annual_writeoff_rate: [0.010, 0.110]}
+  bnpl:          {dpd30_share: [0.030, 0.200], annual_writeoff_rate: [0.003, 0.060]}

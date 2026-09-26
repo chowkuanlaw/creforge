@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creforge"
-version = "0.3.0"
+version = "0.4.0"
 description = "PII-safe synthetic credit bureau data from explicit behavioural rules."
 readme = "README.md"
 license = "Apache-2.0"

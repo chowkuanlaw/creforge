@@ -59,7 +59,7 @@ class Tables:
     g_cure: np.ndarray
     g_util: np.ndarray
     g_transactor: np.ndarray
-    writeoff_after: int
+    writeoff_after: np.ndarray  # (P,) months in the 120+ bucket before write-off
     seasoning: object = field(repr=False)
     guarantor_call: float = 0.0
 
@@ -93,7 +93,9 @@ class Tables:
             g_cure=np.array([x.cure_mult for x in g]),
             g_util=np.array([x.utilization for x in g]),
             g_transactor=np.array([x.transactor_share for x in g]),
-            writeoff_after=prof.writeoff_after_months,
+            writeoff_after=np.array([
+                prof.products[p].writeoff_after_months or prof.writeoff_after_months for p in names
+            ]),
             seasoning=prof.seasoning,
             guarantor_call=prof.parties.guarantor_call if prof.parties.enabled else 0.0,
         )
@@ -296,7 +298,7 @@ def step(t: Tables, book: Book, idx: np.ndarray, month: int, macro: float, rng) 
     new_arr = np.round(np.minimum(new_arr, new_bal), 2)
 
     # Forced transitions: write-off after long 120+; installment paid off.
-    wo = (new_state == D5) & (new_mia >= 5 + t.writeoff_after)
+    wo = (new_state == D5) & (new_mia >= 5 + t.writeoff_after[prod])
     new_state[wo] = WO
     paid_off = ~rev & np.isin(new_state, (C, RS)) & (new_bal <= _EPS) & ~is_close
     new_state[paid_off] = CL
@@ -375,7 +377,7 @@ def initial_state_table(t: Tables, max_age: int) -> np.ndarray:
     pp, gg, ss = pp.ravel(), gg.ravel(), ss.ravel()
     dest_roll = np.where(ss == RS, D1, np.minimum(ss + 1, D5))
     dest_back = np.maximum(ss - 1, C)
-    leak = 1.0 / t.writeoff_after
+    leak = 1.0 / t.writeoff_after[pp]
 
     out = np.zeros((n_p, n_g, max_age + 1, N_TRANSIENT))
     v = np.zeros((n_p, n_g, N_TRANSIENT))

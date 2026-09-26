@@ -14,8 +14,9 @@ from .config import Config, Profile
 from .ids import make_ids
 
 TABLES = ("subject", "inquiry", "account", "account_month", "account_party")
-# Bumped whenever a table, column, type or allowed value changes. 1: creforge 0.1; 2: 0.2+.
-SCHEMA_VERSION = 2
+# Bumped whenever a table, column, type or allowed value changes.
+# 1: creforge 0.1; 2: 0.2-0.3 (account_party); 3: 0.4+ (money defaults to Decimal(18, 2)).
+SCHEMA_VERSION = 3
 MONEY_COLUMNS = {
     "inquiry": ("requested_amount",),
     "account": ("credit_limit", "principal"),
@@ -273,7 +274,7 @@ def _build_book(ctx: Context, subj: Subjects, pre: Terms, age0: np.ndarray, new:
     init_grade = P.nearest_grade(t.g_roll, roll_mult[:n_pre])
     probs = ctx.init_table[product[:n_pre], init_grade, age0]
     state = _choice_rows(rng, probs)
-    extra = rng.integers(0, t.writeoff_after, n_pre)
+    extra = np.floor(rng.random(n_pre) * t.writeoff_after[product[:n_pre]]).astype(np.int32)
     mia = np.where(state <= E.D5, state, 0) + np.where(state == E.D5, extra, 0)
     book.state[pre_idx] = state
     book.mia[pre_idx] = mia

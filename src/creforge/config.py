@@ -80,6 +80,9 @@ class Product(_Model):
     rate_grade_sensitivity: NonNeg = 1.0
     secured: bool = False
     min_payment_pct: Prob | None = None
+    writeoff_after_months: Annotated[int, Field(ge=1, le=36)] | None = Field(
+        None, description="Months in the 120+ bucket before write-off; overrides the profile default"
+    )
     behaviour: Behaviour
 
     @model_validator(mode="after")
@@ -260,7 +263,7 @@ class Config(_Model):
     start_month: str = "2023-01"
     chunk_size: Annotated[int, Field(ge=1)] = 50_000
     money: Literal["float", "decimal"] = Field(
-        "float", description="Money columns as Float64 (rounded to 2 dp) or exact Decimal(18, 2)"
+        "decimal", description="Money columns as exact Decimal(18, 2) or Float64 (rounded to 2 dp)"
     )
 
     @field_validator("start_month")

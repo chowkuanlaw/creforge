@@ -14,7 +14,7 @@ import polars as pl
 
 from . import __version__
 from .config import Config
-from .generator import SCHEMA_VERSION, TABLES, generate_chunk, make_context
+from .generator import MONEY_COLUMNS, MONEY_DECIMAL, SCHEMA_VERSION, TABLES, generate_chunk, make_context
 
 Format = Literal["parquet", "csv"]
 MANIFEST = "manifest.json"
@@ -149,9 +149,11 @@ class DiskDataset:
 
     def iter_chunks(self) -> Iterator[dict[str, pl.DataFrame]]:
         fmt = self.manifest["format"]
+        # Datasets written before 0.3 have no "money" setting; they used Float64.
+        decimal = self.manifest["config"].get("money", "float") == "decimal"
         for i in range(self.manifest["chunks"]):
             # Datasets written by older versions may lack newer tables (e.g. account_party).
-            yield {t: _read(part_path(self.path, t, i, fmt), fmt) for t in TABLES
+            yield {t: _read(part_path(self.path, t, i, fmt), fmt, t, decimal) for t in TABLES
                    if part_path(self.path, t, i, fmt).exists()}
 
 
@@ -166,15 +168,18 @@ _CSV_TYPES: dict[str, pl.DataType] = {
 }
 
 
-def _read(path: Path, fmt: str) -> pl.DataFrame:
+def _read(path: Path, fmt: str, table: str, decimal: bool) -> pl.DataFrame:
     if fmt == "parquet":
         return pl.read_parquet(path)
     df = pl.read_csv(path, infer_schema_length=0)  # every column as text
+    money = MONEY_COLUMNS.get(table, ()) if decimal else ()
     def restore(c: str, t: pl.DataType) -> pl.Expr:
+        # Older Polars reads empty CSV fields as "" rather than null.
+        col = pl.when(pl.col(c) == "").then(None).otherwise(pl.col(c))
         if t == pl.Date():
-            return pl.col(c).str.to_date()
+            return col.str.to_date().alias(c)
         if t == pl.Boolean():
-            return pl.col(c) == "true"
-        return pl.col(c).cast(t)
+            return (col == "true").alias(c)
+        return col.cast(MONEY_DECIMAL if c in money else t).alias(c)
 
     return df.with_columns(restore(c, t) for c, t in _CSV_TYPES.items() if c in df.columns)

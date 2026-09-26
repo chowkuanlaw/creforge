@@ -69,10 +69,11 @@ def test_writeoff_after_configured_months_in_120_plus():
     t = E.Tables(**{**TABLES.__dict__, "cure": TABLES.cure * 0, "back": TABLES.back * 0,
                     "rs": TABLES.rs * 0})
     book.inst[:] = np.maximum(book.inst, 1.0)
-    for m in range(t.writeoff_after):
+    for m in range(t.writeoff_after.max()):
         E.step(t, book, np.flatnonzero(book.active), m, 1.0, rng)
     assert (book.state == E.WO).all()
-    assert (book.close_month == t.writeoff_after - 1).all()
+    # Each product writes off after its own number of months in 120+.
+    assert (book.close_month == t.writeoff_after[book.product] - 1).all()
 
 
 def test_called_guarantor_cures_the_account():

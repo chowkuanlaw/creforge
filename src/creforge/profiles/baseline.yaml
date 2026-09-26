@@ -11,11 +11,15 @@
 name: baseline
 description: >
   Generic retail credit bureau population under a flat (benign) macro path.
+# Every calibration target below cites its source. See docs/calibration.md for the
+# method, the observed ranges and the caveats (US bank data is balance-weighted and
+# bank-only; creforge counts account-months across a population that includes riskier
+# grades).
 sources:
-  - "Federal Reserve Board: Charge-Off and Delinquency Rates on Loans and Leases at Commercial Banks (public statistical release). Used to sanity-check card charge-off and delinquency orders of magnitude."
-  - "Bank Negara Malaysia: Financial Stability Review, household sector asset quality (public). Used to sanity-check secured household impairment levels."
-  - "European Banking Authority: Risk Dashboard, non-performing loan ratios (public)."
-  - "Basel Committee on Banking Supervision: IRB approach, 90 days past due default definition (public). Motivates the 90+ DPD bad definition."
+  - "Federal Reserve Board, Charge-Off and Delinquency Rates on Loans and Leases at Commercial Banks, via FRED (retrieved 2026-09-26): CORCCACBS and DRCCLACBS (credit cards), CORSFRMACBS and DRSFRMACBS (single-family residential mortgages), COROCLACBS and DROCLACBS (other consumer loans, which include auto and personal loans). Targets use the 2015 Q1 to 2026 Q2 range; the stressed profile uses the 2008 to 2011 peaks."
+  - "FFIEC, Uniform Retail Credit Classification and Account Management Policy (2000): open-end retail credit is charged off at 180 days past due and closed-end retail credit at 120 days; residential mortgages are assessed at 180 days. Sets writeoff_after_months per product."
+  - "Basel Committee on Banking Supervision, IRB approach: 90 days past due as the default definition. Motivates the 90+ DPD bad definition used by validate."
+  - "Overdraft and BNPL: no product-specific public series is used. Their targets are stated assumptions (overdraft as open-end credit like cards; BNPL as short-tenor credit with frequent short delinquency and low loss)."
 
 population:
   age_years: [21, 70]
@@ -49,8 +53,9 @@ products:
     max_age_months: 180
     interest_rate: 0.15
     min_payment_pct: 0.05
+    writeoff_after_months: 2   # FFIEC: open-end credit charged off at 180 DPD
     behaviour:
-      roll: [0.018, 0.25, 0.40, 0.55, 0.65]
+      roll: [0.016, 0.25, 0.40, 0.55, 0.65]
       cure: [0.55, 0.20, 0.12, 0.08, 0.03]
       back: [0.15, 0.10, 0.08, 0.03]
       close: 0.008
@@ -61,11 +66,12 @@ products:
     amount: {median: 15000, sigma: 0.60}
     tenor_months: [24, 36, 48, 60, 84]
     interest_rate: 0.08
+    writeoff_after_months: 1   # FFIEC: closed-end credit charged off at 120 DPD
     behaviour:
-      roll: [0.012, 0.30, 0.45, 0.55, 0.65]
-      cure: [0.50, 0.18, 0.10, 0.07, 0.03]
+      roll: [0.012, 0.28, 0.28, 0.25, 0.25]
+      cure: [0.50, 0.28, 0.22, 0.18, 0.10]
       back: [0.15, 0.10, 0.08, 0.03]
-      restructure: 0.03
+      restructure: 0.06
       rs_cure: 0.04
       rs_redefault: 0.03
       close: 0.006
@@ -80,11 +86,12 @@ products:
     interest_rate: 0.042
     rate_grade_sensitivity: 0.3
     secured: true
+    writeoff_after_months: 2   # FFIEC: residential mortgages assessed at 180 DPD
     behaviour:
-      roll: [0.007, 0.22, 0.30, 0.35, 0.40]
-      cure: [0.60, 0.25, 0.15, 0.10, 0.05]
-      back: [0.15, 0.12, 0.10, 0.05]
-      restructure: 0.08
+      roll: [0.030, 0.30, 0.25, 0.20, 0.12]
+      cure: [0.60, 0.30, 0.25, 0.22, 0.25]
+      back: [0.15, 0.12, 0.10, 0.08]
+      restructure: 0.25
       rs_cure: 0.05
       rs_redefault: 0.02
       close: 0.004
@@ -97,11 +104,12 @@ products:
     interest_rate: 0.035
     rate_grade_sensitivity: 0.5
     secured: true
+    writeoff_after_months: 1   # FFIEC: closed-end credit charged off at 120 DPD
     behaviour:
-      roll: [0.010, 0.25, 0.40, 0.50, 0.60]
-      cure: [0.55, 0.20, 0.12, 0.08, 0.04]
+      roll: [0.010, 0.25, 0.28, 0.28, 0.28]
+      cure: [0.55, 0.28, 0.22, 0.18, 0.10]
       back: [0.15, 0.10, 0.08, 0.04]
-      restructure: 0.04
+      restructure: 0.06
       rs_cure: 0.04
       rs_redefault: 0.03
       close: 0.006
@@ -113,6 +121,7 @@ products:
     max_age_months: 180
     interest_rate: 0.08
     min_payment_pct: 0.03
+    writeoff_after_months: 2   # FFIEC: open-end credit charged off at 180 DPD
     behaviour:
       roll: [0.012, 0.25, 0.40, 0.50, 0.60]
       cure: [0.55, 0.20, 0.12, 0.08, 0.03]
@@ -127,6 +136,7 @@ products:
     tenor_months: [3, 4, 6]
     interest_rate: 0.0
     rate_grade_sensitivity: 0.0
+    writeoff_after_months: 1   # closed-end, as FFIEC
     behaviour:
       roll: [0.03, 0.30, 0.45, 0.55, 0.65]
       cure: [0.60, 0.20, 0.10, 0.06, 0.02]
@@ -138,7 +148,7 @@ macro:
   points: [[0, 1.0]]
 inquiries: {recent_window_months: 6, recent_penalty: 0.35, withdrawn_share: 0.05}
 lenders: 40
-writeoff_after_months: 6
+writeoff_after_months: 2   # default for products that don't set their own
 
 # Joint borrowers and guarantors (the `account_party` table).
 #   joint:     share of the product's accounts held with a co-borrower (a household:
@@ -163,14 +173,22 @@ parties:
   guarantor_grade_weights: {A: 4.0, B: 3.0, C: 2.0, D: 0.5, E: 0.25}
   guarantor_call: 0.15
 
-# Calibration bands checked by `creforge validate`. Deliberately wide: they encode
-# "right order of magnitude for this product type", not a point estimate.
+# Calibration bands checked by `creforge validate`, with their sources.
 #   dpd30_share:          share of open account-months at 30+ DPD
 #   annual_writeoff_rate: write-offs per open account-year
+# Observed 2015 Q1 to 2026 Q2 (Federal Reserve, all commercial banks, via FRED):
+#   cards      30+ 1.53-3.22% (DRCCLACBS)   charge-off 1.63-4.69% (CORCCACBS)
+#   mortgages  30+ 1.70-6.22% (DRSFRMACBS)  charge-off -0.04-0.26% (CORSFRMACBS)
+#   other consumer (auto, personal)
+#              30+ 1.48-2.44% (DROCLACBS)   charge-off 0.29-1.23% (COROCLACBS)
+# Bands are the observed range, widened slightly for sampling noise. Auto and personal
+# write-off bands go above the bank-only series: that series excludes finance companies,
+# where most higher-risk auto and personal lending sits (assumption, see
+# docs/calibration.md). Overdraft and BNPL bands are assumptions.
 targets:
-  credit_card:   {dpd30_share: [0.020, 0.050], annual_writeoff_rate: [0.020, 0.060]}
-  personal_loan: {dpd30_share: [0.020, 0.060], annual_writeoff_rate: [0.015, 0.050]}
-  mortgage:      {dpd30_share: [0.005, 0.025], annual_writeoff_rate: [0.000, 0.006]}
-  auto_loan:     {dpd30_share: [0.015, 0.050], annual_writeoff_rate: [0.010, 0.040]}
-  overdraft:     {dpd30_share: [0.015, 0.050], annual_writeoff_rate: [0.010, 0.050]}
+  credit_card:   {dpd30_share: [0.015, 0.035], annual_writeoff_rate: [0.015, 0.050]}
+  mortgage:      {dpd30_share: [0.012, 0.065], annual_writeoff_rate: [0.000, 0.005]}
+  personal_loan: {dpd30_share: [0.012, 0.030], annual_writeoff_rate: [0.003, 0.030]}
+  auto_loan:     {dpd30_share: [0.012, 0.030], annual_writeoff_rate: [0.003, 0.030]}
+  overdraft:     {dpd30_share: [0.010, 0.035], annual_writeoff_rate: [0.010, 0.050]}
   bnpl:          {dpd30_share: [0.030, 0.100], annual_writeoff_rate: [0.003, 0.030]}
