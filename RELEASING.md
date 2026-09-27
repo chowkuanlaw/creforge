@@ -25,9 +25,14 @@ anywhere. Anyone with maintainer rights on the GitHub repository can release.
    ```
 6. **Push to `main`** and wait for CI to pass (every OS, Python version, and the
    min-deps job).
-7. **Publish the GitHub release**: *Releases → Draft a new release*, create the tag
-   `vX.Y.Z` on `main`, title `creforge X.Y.Z`, *Generate release notes*, *Publish*.
-   The `Release` workflow builds and uploads to PyPI.
+7. **Tag the release** on the `main` commit that CI passed:
+   ```console
+   $ git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+   The `Release` workflow checks that the tag matches `pyproject.toml`, builds, uploads
+   to PyPI, and creates the GitHub release page from the version's `CHANGELOG.md`
+   section. (Publishing a release in the GitHub web UI also works; the workflow skips
+   whatever already exists.)
 8. **Verify**: in a fresh virtual environment, `pip install creforge==X.Y.Z`, then run
    `creforge generate -n 2000 -o out && creforge validate out`.
 
@@ -35,5 +40,7 @@ anywhere. Anyone with maintainer rights on the GitHub repository can release.
 
 - *"trusted publishing exchange failure"*: the PyPI trusted publisher settings
   (owner, repository, workflow `release.yml`, environment `pypi`) must match exactly.
-- *"file already exists"*: that version is already on PyPI. PyPI never allows reusing
-  a version number, so bump to the next patch version and release again.
+- *"Tag vX.Y.Z does not match pyproject.toml version"*: the version wasn't bumped (or
+  the tag is wrong). Delete the tag (`git push --delete origin vX.Y.Z`), fix, and retag.
+- PyPI never allows reusing a version number. If a broken build was uploaded, bump to
+  the next patch version and release again.
