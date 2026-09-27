@@ -134,6 +134,21 @@ $ creforge score dirty/faults.parquet my_findings.csv --min-recall 0.9
 catalogue and the answer-key format are in
 [docs/fault-injection.md](docs/fault-injection.md).
 
+## Testing bureau ingestion: monthly submissions
+
+A bureau receives one file per lender per month, and those files arrive late, twice,
+in parts, a month behind, or with wrong values that a later correction fixes.
+`creforge submissions` turns a dataset into that stream of files (with an answer key),
+and `creforge reconcile` checks whether your ingestion pipeline rebuilt the truth:
+
+```console
+$ creforge submissions clean --issues standard -o inbox
+$ creforge reconcile clean rebuilt/ --inbox inbox     # PASS, or each difference with its cause
+```
+
+The file layout, the six delivery issues, and a short reference ingester are in
+[docs/submissions.md](docs/submissions.md).
+
 ## Loading into a warehouse
 
 `creforge ddl` writes the table definitions for Athena, Glue, DuckDB, Postgres, Redshift
@@ -203,7 +218,8 @@ measure your own machine.
 ## Roadmap
 
 1. ~~Guarantor and joint-account links~~: done in 0.2. ~~Fault injection for
-   testing data-quality checks~~: done in 0.5.
+   testing data-quality checks~~: done in 0.5. ~~Monthly submissions with late,
+   duplicate and corrected files~~: done in 0.7.
 2. Contagion: a called guarantee raising the guarantor's own risk; supplementary cards.
 3. Business subjects, directors and shareholding graphs.
 4. Collateral and legal/litigation records.

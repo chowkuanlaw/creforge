@@ -1,0 +1,13 @@
+# creforge delivery-issue profile: nasty
+# About 10% of deliveries per issue type (well over half of all deliveries have a
+# problem), and 5% of a corrected file's rows are wrong. See docs/submissions.md.
+name: nasty
+description: About 10% of deliveries per issue type; 5% of a corrected file's rows are wrong.
+correction_share: 0.05
+rates:
+  late: 0.10
+  duplicate: 0.10
+  correction: 0.10
+  out_of_order_correction: 0.10
+  missing_then_catch_up: 0.10
+  partial: 0.10

@@ -16,6 +16,8 @@ from .config import Config, list_profiles, load_profile
 from .dataset import DiskDataset, write_dataset
 from .ddl import DIALECTS, copy_script, ddl
 from .faults import inject, list_fault_profiles, load_fault_profile, score
+from .reconcile import reconcile
+from .submissions import list_issue_profiles, load_issue_profile, submissions
 from .validate import validate
 
 
@@ -113,6 +115,58 @@ def score_cmd(answer_key, findings, as_json, min_recall) -> None:
     click.echo(json.dumps(rep.to_dict(), indent=2) if as_json else rep.to_markdown())
     if min_recall is not None and rep.recall < min_recall:
         sys.exit(1)
+
+
+@main.command(name="submissions")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--issues", "-i", default="standard", show_default=True,
+              help="Delivery-issue profile (none, light, standard, nasty) or path to a YAML profile.")
+@click.option("--seed", "-s", type=click.IntRange(min=0), default=0, show_default=True)
+@click.option("--out", "-o", type=click.Path(file_okay=False, path_type=Path), required=True)
+@click.option("--format", "fmt", type=click.Choice(["parquet", "csv"]), default=None,
+              help="File format. Defaults to the dataset's.")
+def submissions_cmd(dataset, issues, seed, out, fmt) -> None:
+    """Split DATASET into monthly lender submission files, with delivery issues."""
+    m = submissions(dataset, out, issues=issues, seed=seed, format=fmt)
+    click.echo(f"Wrote {m['submissions']:,} submission files ({m['rows']:,} rows) to {out} "
+               f"(issues={m['profile']['name']}, seed={seed})")
+    click.echo(f"  delivery log: {out / m['log']}; answer key: {out / m['answer_key']}")
+    for issue, n in m["issue_counts"].items():
+        click.echo(f"  {issue:<24} {n:>8,} deliveries")
+
+
+@main.command(name="reconcile")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("rebuilt", type=click.Path(exists=True, path_type=Path))
+@click.option("--inbox", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="The submissions inbox, to name the delivery issue behind each difference.")
+@click.option("--max-differences", type=click.IntRange(min=0), default=0, show_default=True,
+              help="Exit non-zero if there are more differences than this.")
+@click.option("--json", "as_json", is_flag=True, help="Emit the report as JSON.")
+def reconcile_cmd(dataset, rebuilt, inbox, max_differences, as_json) -> None:
+    """Check REBUILT (account/ and account_month/ folders, or a DuckDB file) against DATASET."""
+    rep = reconcile(dataset, rebuilt, inbox=inbox)
+    click.echo(json.dumps(rep.to_dict(), indent=2, default=str) if as_json else rep.to_markdown())
+    if rep.differences > max_differences or any(t.missing_columns for t in rep.tables.values()):
+        sys.exit(1)
+
+
+@main.group()
+def issues() -> None:
+    """Inspect built-in delivery-issue profiles."""
+
+
+@issues.command(name="list")
+def issues_list() -> None:
+    for name in list_issue_profiles():
+        click.echo(f"{name:<12} {load_issue_profile(name).description}")
+
+
+@issues.command(name="show")
+@click.argument("name")
+def issues_show(name) -> None:
+    """Print the fully resolved delivery-issue profile as YAML."""
+    click.echo(yaml.safe_dump(load_issue_profile(name).model_dump(mode="json"), sort_keys=False))
 
 
 @main.command(name="ddl")

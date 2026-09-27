@@ -1,0 +1,5 @@
+# creforge delivery-issue profile: none
+# Clean monthly files: every lender sends each month once, on time, complete and correct.
+name: none
+description: Clean monthly files; no delivery issues.
+rates: {}

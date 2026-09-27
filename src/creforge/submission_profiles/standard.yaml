@@ -1,0 +1,13 @@
+# creforge delivery-issue profile: standard
+# About 3% of deliveries (lender x month) per issue type, so roughly one delivery in
+# six has a problem. Corrected files restate 2% of their rows. See docs/submissions.md.
+name: standard
+description: About 3% of deliveries per issue type; 2% of a corrected file's rows are wrong.
+correction_share: 0.02
+rates:
+  late: 0.03
+  duplicate: 0.03
+  correction: 0.03
+  out_of_order_correction: 0.03
+  missing_then_catch_up: 0.03
+  partial: 0.03

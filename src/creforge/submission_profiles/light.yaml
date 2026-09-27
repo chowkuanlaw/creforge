@@ -1,0 +1,12 @@
+# creforge delivery-issue profile: light
+# About 1% of deliveries (lender x month) per issue type. See docs/submissions.md.
+name: light
+description: About 1% of deliveries per issue type.
+correction_share: 0.02
+rates:
+  late: 0.01
+  duplicate: 0.01
+  correction: 0.01
+  out_of_order_correction: 0.01
+  missing_then_catch_up: 0.01
+  partial: 0.01

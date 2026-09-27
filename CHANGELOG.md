@@ -7,6 +7,33 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-27
+
+### Added
+- **Monthly submissions** ([docs/submissions.md](docs/submissions.md)):
+  `creforge submissions DATASET -o INBOX` splits a dataset into the files lenders send
+  a bureau. There is one file per lender per reporting month, and each row holds the
+  account's fields plus that month's fields. A delivery log (`submissions.parquet`)
+  lists every file with its arrival time.
+- Six delivery issues, recorded in an answer key (`issues.parquet`):
+  - late files;
+  - duplicate resends;
+  - wrong originals fixed by a later correction;
+  - corrections that arrive before the original;
+  - skipped months caught up in the next file;
+  - files split into parts.
+- Built-in issue profiles `none`, `light`, `standard` and `nasty`, with custom profiles
+  in YAML. Output is deterministic per seed.
+- `creforge reconcile DATASET REBUILT [--inbox INBOX]` checks the `account` and
+  `account_month` tables a pipeline rebuilt against the truth. `REBUILT` can be Parquet
+  or CSV folders, or a DuckDB file. The report covers missing and extra rows, duplicate
+  keys, and wrong values per column, with the delivery issue behind each difference.
+  `--max-differences` makes it usable as a CI gate.
+- `creforge issues list|show`, and Python API `submissions`, `reconcile`,
+  `ReconcileReport`, `IssueProfile`, `load_issue_profile` and `list_issue_profiles`.
+- A tested reference ingester in the docs shows the rule that rebuilds the truth
+  exactly.
+
 ## [0.6.0] - 2026-09-27
 
 ### Added
@@ -156,7 +183,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/chowkuanlaw/creforge/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/chowkuanlaw/creforge/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chowkuanlaw/creforge/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/chowkuanlaw/creforge/compare/v0.3.0...v0.4.0
