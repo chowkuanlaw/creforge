@@ -7,6 +7,16 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+### Added
+- Every GitHub release has sample datasets attached (10,000 borrowers × 36 months,
+  seed 42, Parquet and CSV), generated and validated with that release's own package.
+- `CITATION.cff`, so GitHub shows "Cite this repository".
+- PyPI project links: documentation, changelog, issues.
+
+### Changed
+- PyPI status is now "Beta".
+- Release notes use absolute links, so they work on the release page.
+
 ## [0.4.0] - 2026-09-26
 
 ### Changed

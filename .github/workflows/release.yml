@@ -68,25 +68,52 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.build.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - name: Create the GitHub release from CHANGELOG.md (if it doesn't exist yet)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build.outputs.version }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Release notes from CHANGELOG.md, with absolute links
         run: |
-          tag="v$VERSION"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; nothing to do."
-            exit 0
-          fi
-          # The CHANGELOG section for this version, without its heading.
+          # The CHANGELOG section for this version, without its heading. Relative links
+          # (docs/..., CHANGELOG.md) are made absolute so they work on the release page.
           awk -v v="$VERSION" '
             index($0, "## [" v "]") == 1 { on = 1; next }
             on && /^## \[/ { exit }
             on { print }
-          ' CHANGELOG.md > notes.md
-          echo "" >> notes.md
-          echo "Install: \`pip install creforge==$VERSION\`" >> notes.md
-          # Creates the tag on this commit if it doesn't exist (manual runs); reuses it otherwise.
-          gh release create "$tag" --title "creforge $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
+          ' CHANGELOG.md \
+            | TAG="v$VERSION" perl -pe 's#\]\((?!https?://|\#)([^)]+)\)#](https://github.com/$ENV{GITHUB_REPOSITORY}/blob/$ENV{TAG}/$1)#g' \
+            > notes.md
+          cat >> notes.md <<EOT
+
+          Install: \`pip install creforge==$VERSION\`
+
+          **Sample data** (attached below): 10,000 borrowers × 36 months from the
+          \`baseline\` profile, seed 42, in Parquet and CSV. Open them with DuckDB, Power BI,
+          Excel or pandas without installing creforge.
+          EOT
+      - name: Create or update the GitHub release
+        run: |
+          tag="v$VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --notes-file notes.md
+          else
+            # Creates the tag on this commit if it doesn't exist (manual runs); reuses it otherwise.
+            gh release create "$tag" --title "creforge $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
+          fi
+      - name: Attach sample datasets built with this release's own package
+        run: |
+          python -m pip install dist/*.whl
+          creforge generate --subjects 10000 --seed 42 --out sample-parquet
+          creforge generate --subjects 10000 --seed 42 --format csv --out sample-csv
+          creforge validate sample-parquet --strict > /dev/null
+          (cd sample-parquet && zip -qr "../creforge-$VERSION-sample-parquet.zip" .)
+          (cd sample-csv && zip -qr "../creforge-$VERSION-sample-csv.zip" .)
+          gh release upload "v$VERSION" "creforge-$VERSION-sample-parquet.zip" "creforge-$VERSION-sample-csv.zip" --clobber

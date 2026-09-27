@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use creforge in your work, please cite it as below."
+title: "creforge: PII-safe synthetic credit bureau data from explicit behavioural rules"
+type: software
+authors:
+  - alias: chowkuanlaw
+    website: "https://github.com/chowkuanlaw"
+repository-code: "https://github.com/chowkuanlaw/creforge"
+url: "https://pypi.org/project/creforge/"
+license: Apache-2.0
+keywords:
+  - synthetic data
+  - credit risk
+  - credit bureau
+  - test data
+  - privacy
+version: 0.4.0
+date-released: "2026-09-27"

@@ -14,7 +14,8 @@ anywhere. Anyone with maintainer rights on the GitHub repository can release.
 2. **If the schema changed**, bump `SCHEMA_VERSION` in `src/creforge/generator.py` and
    update [docs/data-dictionary.md](docs/data-dictionary.md). The docs tests fail until
    both agree.
-3. **Update the version** in `pyproject.toml` and `src/creforge/__init__.py`.
+3. **Update the version** in `pyproject.toml`, `src/creforge/__init__.py` and
+   `CITATION.cff` (also its `date-released`).
 4. **Update `CHANGELOG.md`**: move items from *Unreleased* to the new version, with
    today's date, and add the compare link at the bottom.
 5. **Check locally**:

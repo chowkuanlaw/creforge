@@ -17,6 +17,10 @@ Use it to test credit data pipelines, demo dashboards, teach credit-risk analyti
 benchmark warehouses, or give contractors and vendors a realistic dataset without a
 data-sharing agreement.
 
+**Just want the data?** Every [release](https://github.com/chowkuanlaw/creforge/releases/latest)
+has a ready-made sample attached (10,000 borrowers × 36 months, Parquet and CSV) that
+opens in DuckDB, Power BI, Excel or pandas, with nothing to install.
+
 ```console
 $ pip install creforge
 $ creforge generate --subjects 1000000 --months 36 --seed 42 --out ./bureau --workers 4

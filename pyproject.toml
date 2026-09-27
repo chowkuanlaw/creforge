@@ -13,7 +13,7 @@ requires-python = ">=3.10"
 authors = [{ name = "creforge contributors" }]
 keywords = ["synthetic-data", "credit-risk", "credit-bureau", "test-data", "privacy"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Intended Audience :: Financial and Insurance Industry",
   "Operating System :: OS Independent",
@@ -43,6 +43,10 @@ creforge = "creforge.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/chowkuanlaw/creforge"
+Documentation = "https://github.com/chowkuanlaw/creforge/tree/main/docs"
+Changelog = "https://github.com/chowkuanlaw/creforge/blob/main/CHANGELOG.md"
+Issues = "https://github.com/chowkuanlaw/creforge/issues"
+Source = "https://github.com/chowkuanlaw/creforge"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/creforge"]
