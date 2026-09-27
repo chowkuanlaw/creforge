@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import click
+import polars as pl
 import yaml
 from pydantic import ValidationError
 
@@ -16,6 +17,7 @@ from .config import Config, list_profiles, load_profile
 from .dataset import DiskDataset, write_dataset
 from .ddl import DIALECTS, copy_script, ddl
 from .faults import inject, list_fault_profiles, load_fault_profile, score
+from .features import BAD_DEFINITIONS, features
 from .reconcile import reconcile
 from .submissions import list_issue_profiles, load_issue_profile, submissions
 from .validate import validate
@@ -115,6 +117,35 @@ def score_cmd(answer_key, findings, as_json, min_recall) -> None:
     click.echo(json.dumps(rep.to_dict(), indent=2) if as_json else rep.to_markdown())
     if min_recall is not None and rep.recall < min_recall:
         sys.exit(1)
+
+
+@main.command(name="features")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--as-of", "as_of", multiple=True, required=True,
+              help="Observation month YYYY-MM; repeat for several snapshots.")
+@click.option("--performance", type=click.IntRange(min=1), default=12, show_default=True,
+              help="Months after the observation month in which the target is measured.")
+@click.option("--bad", type=click.Choice(BAD_DEFINITIONS), default="90dpd", show_default=True,
+              help="Bad definition: 90+ DPD or written off, 60+ DPD or written off, or written off.")
+@click.option("--include-truth", is_flag=True, help="Add the generator's hidden risk_grade.")
+@click.option("--out", "-o", type=click.Path(dir_okay=False, path_type=Path), required=True,
+              help="Output file, .parquet or .csv.")
+def features_cmd(dataset, as_of, performance, bad, include_truth, out) -> None:
+    """Point-in-time scorecard feature table with a good/bad target."""
+    if out.suffix not in (".parquet", ".csv"):
+        raise click.UsageError("--out must end in .parquet or .csv")
+    df = features(dataset, list(as_of), performance=performance, bad=bad, include_truth=include_truth)
+    if out.suffix == ".parquet":
+        df.write_parquet(out)
+    else:
+        df.write_csv(out)
+    click.echo(f"Wrote {out}: {df.height:,} rows, {len(df.columns)} columns")
+    summary = df.group_by("as_of_month").agg(
+        pl.len().alias("rows"), pl.col("excluded").is_null().sum().alias("in_scope"),
+        pl.col("bad").filter(pl.col("excluded").is_null()).mean().alias("bad_rate")).sort("as_of_month")
+    for month, rows, in_scope, rate in summary.iter_rows():
+        click.echo(f"  {str(month)[:7]}  {rows:>10,} subjects, {in_scope:>10,} in scope, "
+                   f"bad rate {rate or 0:.2%} ({bad}, {performance} months)")
 
 
 @main.command(name="submissions")

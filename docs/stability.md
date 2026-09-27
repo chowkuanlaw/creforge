@@ -51,6 +51,7 @@ Supported names, importable from `creforge`:
 | `ddl`, `copy_script` | Warehouse DDL (Athena, Glue, DuckDB, Postgres, Redshift, Snowflake) and a Postgres `\copy` script |
 | `load_duckdb` | Load a dataset into DuckDB (optional extra `creforge[duckdb]`) |
 | `submissions`, `IssueProfile`, `load_issue_profile`, `list_issue_profiles` | Monthly lender submission files with delivery issues |
+| `features`, `feature_columns` | Point-in-time scorecard feature table with a good/bad target |
 | `reconcile`, `ReconcileReport` | Check tables a pipeline rebuilt from submissions against the truth |
 | `__version__` | Package version |
 
@@ -61,7 +62,7 @@ The fields of `Report.metrics` are informational and may gain keys in minor vers
 ## Command line
 
 `creforge generate`, `creforge validate`, `creforge inject`, `creforge score`,
-`creforge ddl`, `creforge load duckdb`, `creforge submissions`, `creforge reconcile`,
+`creforge ddl`, `creforge load duckdb`, `creforge features`, `creforge submissions`, `creforge reconcile`,
 `creforge profiles list|show`, `creforge faults list|show` and
 `creforge issues list|show`, with their
 documented options, follow the same rules as the Python API. Removing or renaming an

@@ -1,6 +1,6 @@
 """creforge: PII-safe synthetic credit bureau data from explicit behavioural rules."""
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 from .config import Config, Profile, list_profiles, load_profile  # noqa: E402
 from .dataset import Dataset, DiskDataset, generate, write_dataset  # noqa: E402
@@ -13,6 +13,7 @@ from .faults import (  # noqa: E402
     row_key,
     score,
 )
+from .features import feature_columns, features  # noqa: E402
 from .load import load_duckdb  # noqa: E402
 from .reconcile import ReconcileReport, reconcile  # noqa: E402
 from .submissions import IssueProfile, list_issue_profiles, load_issue_profile, submissions  # noqa: E402
@@ -30,6 +31,8 @@ __all__ = [
     "__version__",
     "copy_script",
     "ddl",
+    "feature_columns",
+    "features",
     "generate",
     "inject",
     "list_fault_profiles",

@@ -7,6 +7,31 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-27
+
+### Added
+- **Scorecard feature table** ([docs/features.md](docs/features.md)):
+  `creforge features DATASET --as-of YYYY-MM -o features.parquet` gives one row per
+  subject on file at the observation month. It has about 30 point-in-time attributes:
+  - open accounts by product, balances and revolving utilisation;
+  - worst DPD now and over 3/6/12/24 months, months since delinquency, accounts ever
+    30+/60+/90+;
+  - payment ratios, account ages, inquiries, and joint and guarantor links.
+
+  It also has a `bad` target over a performance window (`--performance`, default 12
+  months).
+- Bad definitions: `90dpd` (default: 90+ DPD or written off), `60dpd` and `writeoff`.
+  Exclusions (`already_bad`, `no_open_account`) are flagged, not dropped.
+- `--as-of` can be repeated for out-of-time snapshots. `--include-truth` adds the
+  hidden risk grade for diagnostics.
+- Tests show:
+  - no leakage: rewriting all data after the observation month changes only the target;
+  - a correct target: recomputed independently;
+  - usable signal: a simple logistic regression reaches a holdout Gini above 0.4 (0.71
+    at 100,000 borrowers), and bad rates rise with the hidden grade.
+- A reference SQL for four features is run against DuckDB in the tests.
+- Python API `features` and `feature_columns`.
+
 ## [0.7.0] - 2026-09-27
 
 ### Added
@@ -183,7 +208,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/chowkuanlaw/creforge/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/chowkuanlaw/creforge/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/chowkuanlaw/creforge/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chowkuanlaw/creforge/compare/v0.4.0...v0.5.0

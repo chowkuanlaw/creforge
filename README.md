@@ -134,6 +134,21 @@ $ creforge score dirty/faults.parquet my_findings.csv --min-recall 0.9
 catalogue and the answer-key format are in
 [docs/fault-injection.md](docs/fault-injection.md).
 
+## Scorecard feature table
+
+`creforge features` builds the table every credit-scoring project starts with: one row
+per borrower at an observation month, about 30 point-in-time bureau attributes
+(utilisation, worst arrears over 3/6/12/24 months, inquiries, account age, joint and
+guarantor links, …) and a good/bad target over the following months.
+
+```console
+$ creforge features clean --as-of 2024-06 --performance 12 -o features.parquet
+```
+
+A test proves there is no leakage from after the observation month. The default bad
+definition is 90+ days past due or written off, and exclusions are flagged, not
+dropped. Details and a tested reference SQL are in [docs/features.md](docs/features.md).
+
 ## Testing bureau ingestion: monthly submissions
 
 A bureau receives one file per lender per month, and those files arrive late, twice,
@@ -219,7 +234,7 @@ measure your own machine.
 
 1. ~~Guarantor and joint-account links~~: done in 0.2. ~~Fault injection for
    testing data-quality checks~~: done in 0.5. ~~Monthly submissions with late,
-   duplicate and corrected files~~: done in 0.7.
+   duplicate and corrected files~~: done in 0.7. ~~Scorecard feature table~~: done in 0.8.
 2. Contagion: a called guarantee raising the guarantor's own risk; supplementary cards.
 3. Business subjects, directors and shareholding graphs.
 4. Collateral and legal/litigation records.
