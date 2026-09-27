@@ -1,0 +1,23 @@
+# creforge fault profile: light
+# About 0.1% of eligible rows per fault type (at least one of each). A smoke test that
+# checks exist at all.
+extends: standard
+name: light
+description: About 0.1% of eligible rows per fault type; one fault per row.
+rates:
+  duplicate_row: 0.001
+  duplicate_key: 0.001
+  orphan_row: 0.001
+  missing_month: 0.001
+  null_required: 0.001
+  unknown_code: 0.001
+  negative_amount: 0.001
+  scale_error: 0.001
+  future_date: 0.001
+  code_formatting: 0.001
+  dpd_jump: 0.001
+  paid_while_rolling: 0.001
+  activity_after_closure: 0.001
+  close_reason_mismatch: 0.001
+  date_format: 0.001
+  type_mismatch: 0.001

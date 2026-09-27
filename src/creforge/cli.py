@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from . import __version__
 from .config import Config, list_profiles, load_profile
 from .dataset import write_dataset
+from .faults import inject, list_fault_profiles, load_fault_profile, score
 from .validate import validate
 
 
@@ -76,6 +77,59 @@ def validate_cmd(path, as_json, report, strict) -> None:
     click.echo(json.dumps(rep.to_dict(), indent=2, default=str) if as_json else md)
     if not rep.integrity_ok or (strict and not rep.calibration_ok):
         sys.exit(1)
+
+
+@main.command(name="inject")
+@click.argument("clean", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--faults", "-f", default="standard", show_default=True,
+              help="Built-in fault profile (light, standard, nasty) or path to a YAML profile.")
+@click.option("--seed", "-s", type=click.IntRange(min=0), default=0, show_default=True)
+@click.option("--out", "-o", type=click.Path(file_okay=False, path_type=Path), required=True)
+@click.option("--format", "fmt", type=click.Choice(["parquet", "csv"]), default=None,
+              help="Output format. Defaults to the clean dataset's. CSV enables the CSV-only faults.")
+def inject_cmd(clean, faults, seed, out, fmt) -> None:
+    """Write a corrupted copy of dataset CLEAN, with an answer key (faults.parquet)."""
+    manifest = inject(clean, out, faults=faults, seed=seed, format=fmt)
+    info = manifest["faults"]
+    total = sum(info["counts"].values())
+    click.echo(f"Wrote {out} with {total:,} injected faults (profile={info['profile']['name']}, "
+               f"seed={seed}); answer key: {out / info['answer_key']}")
+    for fault, n in info["counts"].items():
+        click.echo(f"  {fault:<24} {n:>10,}")
+    for fault, why in info["skipped"].items():
+        click.echo(f"  {fault:<24} {'skipped':>10}  ({why})")
+
+
+@main.command(name="score")
+@click.argument("answer_key", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument("findings", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True, help="Emit the score as JSON.")
+@click.option("--min-recall", type=click.FloatRange(0, 1), default=None,
+              help="Exit non-zero if recall is below this (for CI).")
+def score_cmd(answer_key, findings, as_json, min_recall) -> None:
+    """Grade data-quality FINDINGS (CSV or Parquet: table, row_key[, column]) against ANSWER_KEY."""
+    rep = score(answer_key, findings)
+    click.echo(json.dumps(rep.to_dict(), indent=2) if as_json else rep.to_markdown())
+    if min_recall is not None and rep.recall < min_recall:
+        sys.exit(1)
+
+
+@main.group()
+def faults() -> None:
+    """Inspect built-in fault profiles."""
+
+
+@faults.command(name="list")
+def faults_list() -> None:
+    for name in list_fault_profiles():
+        click.echo(f"{name:<12} {load_fault_profile(name).description}")
+
+
+@faults.command(name="show")
+@click.argument("name")
+def faults_show(name) -> None:
+    """Print the fully resolved fault profile (inheritance applied) as YAML."""
+    click.echo(yaml.safe_dump(load_fault_profile(name).model_dump(mode="json"), sort_keys=False))
 
 
 @main.group()

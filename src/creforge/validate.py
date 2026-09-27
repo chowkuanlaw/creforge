@@ -9,12 +9,16 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
+from datetime import date, timedelta
 from pathlib import Path
 
 import polars as pl
 
 from .dataset import PRIVACY_STATEMENT, Dataset, DiskDataset
-from .engine import DPD_BUCKETS
+from .engine import CLOSE_REASONS, DPD_BUCKETS, STATUSES
+from .faults import REQUIRED
+from .generator import OUTCOMES
+from .parties import ROLES
 
 TERMINAL = ("written_off", "closed")
 ACTIVE = ("current", "delinquent", "restructured")
@@ -114,12 +118,28 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
     for ch in data.iter_chunks():
         s, q, a = ch["subject"], ch["inquiry"], ch["account"]
         am = ch["account_month"].with_columns(
-            pl.col("dpd_bucket").cast(pl.String).replace_strict(dpd_index, return_dtype=pl.Int8)
-            .alias("dpd"),
+            pl.col("dpd_bucket").cast(pl.String)
+            .replace_strict(dpd_index, default=None, return_dtype=pl.Int8).alias("dpd"),
             pl.col("status").cast(pl.String),
         )
         for name, df in (("subject", s), ("inquiry", q), ("account", a), ("account_month", am)):
             counts[name] += df.height
+
+        # Row-level checks (these also catch data corrupted by `creforge inject`).
+        viol["unique_account_month_key"] += am.height - am.select("account_id", "as_of_month").n_unique()
+        for table, cols in REQUIRED.items():
+            df = ch[table]
+            viol["null_in_required_columns"] += int(sum(df[c].null_count() for c in cols if c in df.columns))
+        for table, column, allowed in _allowed_codes(cfg):
+            if table in ch and column in ch[table].columns:
+                col = ch[table][column].cast(pl.String)
+                viol["invalid_codes"] += int((col.is_not_null() & ~col.is_in(allowed)).sum())
+        end_day = pl.lit(_window_end(cfg))
+        viol["dates_outside_window"] += (
+            q.filter((pl.col("inquiry_date") < start) | (pl.col("inquiry_date") > end_day)).height
+            + a.filter(pl.col("open_date") > end_day).height
+            + am.filter((pl.col("as_of_month") < start) | (pl.col("as_of_month") > end_day)).height
+        )
         ids["subject"].append(s["subject_id"])
         ids["inquiry"].append(q["inquiry_id"])
         ids["account"].append(a["account_id"])
@@ -234,11 +254,12 @@ def validate(data: Dataset | DiskDataset | str | Path) -> Report:
         col = pl.concat(series)
         dup = col.len() - col.n_unique()
         report.checks.append(Check(f"unique_{table}_id", "integrity", dup == 0, f"{dup} duplicates"))
-    for name in ("fk_inquiry_subject", "fk_account_subject", "fk_account_inquiry",
-                 "fk_month_account", "open_before_inquiry", "accounts_without_history",
-                 "history_span", "rows_after_terminal", "close_reason_mismatch",
-                 "dpd_skips_bucket", "paid_while_rolling", "negative_amounts",
-                 "delinquent_without_due"):
+    for name in ("unique_account_month_key", "null_in_required_columns", "invalid_codes",
+                 "dates_outside_window", "fk_inquiry_subject", "fk_account_subject",
+                 "fk_account_inquiry", "fk_month_account", "open_before_inquiry",
+                 "accounts_without_history", "history_span", "rows_after_terminal",
+                 "close_reason_mismatch", "dpd_skips_bucket", "paid_while_rolling",
+                 "negative_amounts", "delinquent_without_due"):
         report.checks.append(Check(name, "integrity", viol[name] == 0, f"{viol[name]} violations"))
     party.checks(report, viol)
 
@@ -368,6 +389,28 @@ class _PartyAcc:
                 "guarantors_better_grade", "calibration", g < p,
                 f"mean grade index {g:.2f} for guarantors vs {p:.2f} for the primaries they back"))
         report.metrics["parties"] = metrics
+
+
+def _allowed_codes(cfg) -> list[tuple[str, str, list[str]]]:
+    prof = cfg.profile
+    return [
+        ("subject", "risk_grade", list(prof.grades)),
+        ("subject", "income_band", list(prof.population.income_bands)),
+        ("inquiry", "product_type", list(prof.products)),
+        ("inquiry", "outcome", list(OUTCOMES)),
+        ("account", "product_type", list(prof.products)),
+        ("account", "close_reason", list(CLOSE_REASONS)),
+        ("account_month", "dpd_bucket", list(DPD_BUCKETS)),
+        ("account_month", "status", list(STATUSES)),
+        ("account_party", "role", list(ROLES)),
+    ]
+
+
+def _window_end(cfg) -> date:
+    y, m = map(int, cfg.start_month.split("-"))
+    m += cfg.months
+    y, m = y + (m - 1) // 12, (m - 1) % 12 + 1
+    return date(y, m, 1) - timedelta(days=1)
 
 
 def _flag(df: pl.DataFrame, ids: pl.DataFrame, name: str) -> pl.DataFrame:

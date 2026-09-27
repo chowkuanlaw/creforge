@@ -101,7 +101,7 @@ def part_path(out: Path, table: str, chunk: int, format: Format) -> Path:
 
 
 def _write_chunk(out: Path, chunk: int, frames: dict[str, pl.DataFrame], format: Format) -> dict:
-    for name in TABLES:
+    for name in (t for t in TABLES if t in frames):
         path = part_path(out, name, chunk, format)
         path.parent.mkdir(parents=True, exist_ok=True)
         df = frames[name]
@@ -109,7 +109,7 @@ def _write_chunk(out: Path, chunk: int, frames: dict[str, pl.DataFrame], format:
             df.write_parquet(path, compression="zstd", statistics=True)
         else:
             df.write_csv(path)
-    return {name: frames[name].height for name in TABLES}
+    return {name: frames[name].height for name in TABLES if name in frames}
 
 
 def _write_manifest(out: Path, config: Config, format: Format, counts: list[dict]) -> dict:
@@ -176,10 +176,12 @@ def _read(path: Path, fmt: str, table: str, decimal: bool) -> pl.DataFrame:
     def restore(c: str, t: pl.DataType) -> pl.Expr:
         # Older Polars reads empty CSV fields as "" rather than null.
         col = pl.when(pl.col(c) == "").then(None).otherwise(pl.col(c))
+        # strict=False: unreadable values (e.g. in a deliberately corrupted dataset) become
+        # null, which `validate` reports as missing required values.
         if t == pl.Date():
-            return col.str.to_date().alias(c)
+            return col.str.to_date(strict=False).alias(c)
         if t == pl.Boolean():
             return (col == "true").alias(c)
-        return col.cast(MONEY_DECIMAL if c in money else t).alias(c)
+        return col.cast(MONEY_DECIMAL if c in money else t, strict=False).alias(c)
 
     return df.with_columns(restore(c, t) for c, t in _CSV_TYPES.items() if c in df.columns)

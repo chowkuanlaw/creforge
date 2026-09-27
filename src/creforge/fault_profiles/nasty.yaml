@@ -1,0 +1,24 @@
+# creforge fault profile: nasty
+# About 5% of eligible rows per fault type, and several faults may land on the same
+# row. For stress-testing how robust a pipeline is, not for everyday regression tests.
+extends: standard
+name: nasty
+description: About 5% of eligible rows per fault type; faults may overlap on a row.
+allow_overlap: true
+rates:
+  duplicate_row: 0.05
+  duplicate_key: 0.05
+  orphan_row: 0.05
+  missing_month: 0.05
+  null_required: 0.05
+  unknown_code: 0.05
+  negative_amount: 0.05
+  scale_error: 0.05
+  future_date: 0.05
+  code_formatting: 0.05
+  dpd_jump: 0.05
+  paid_while_rolling: 0.05
+  activity_after_closure: 0.05
+  close_reason_mismatch: 0.05
+  date_format: 0.05
+  type_mismatch: 0.05

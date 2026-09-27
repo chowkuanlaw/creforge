@@ -7,7 +7,24 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-27
+
 ### Added
+- **Fault injection** ([docs/fault-injection.md](docs/fault-injection.md)):
+  `creforge inject CLEAN -o DIRTY` writes a corrupted copy of a dataset plus an answer key
+  (`faults.parquet`) listing every injected fault. There are 16 fault types:
+  duplicates, orphan rows, missing months, nulls, unknown codes, negative and ×100
+  amounts, future dates, badly formatted codes, DPD jumps, payments while rolling,
+  activity after closure, contradictory close reasons, and (CSV only) bad date formats
+  and text in numeric columns. Built-in fault profiles `light`, `standard` and `nasty`;
+  custom profiles in YAML. Deterministic per seed; the clean dataset is never changed.
+- `creforge score ANSWER_KEY FINDINGS` grades a data-quality tool's findings: recall,
+  precision and recall by fault type, with `--min-recall` for CI.
+- `creforge faults list|show`; Python API `inject`, `score`, `row_key`,
+  `load_fault_profile`, `list_fault_profiles`, `ScoreReport`.
+- `creforge validate` has four new integrity checks: `unique_account_month_key`,
+  `null_in_required_columns`, `invalid_codes` and `dates_outside_window`. It no longer
+  crashes on corrupted data: unknown codes and unreadable CSV values are reported.
 - Every GitHub release has sample datasets attached (10,000 borrowers × 36 months,
   seed 42, Parquet and CSV), generated and validated with that release's own package.
 - `CITATION.cff`, so GitHub shows "Cite this repository".
@@ -122,7 +139,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/chowkuanlaw/creforge/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/chowkuanlaw/creforge/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/chowkuanlaw/creforge/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/chowkuanlaw/creforge/compare/v0.1.0...v0.2.0

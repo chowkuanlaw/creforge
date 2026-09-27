@@ -1,0 +1,23 @@
+# creforge fault profile: standard
+# About 1% of eligible rows per fault type, at least one of each type per chunk, and at
+# most one fault per row. See docs/fault-injection.md for the catalogue.
+name: standard
+description: About 1% of eligible rows per fault type; one fault per row.
+allow_overlap: false
+rates:
+  duplicate_row: 0.01
+  duplicate_key: 0.01
+  orphan_row: 0.01
+  missing_month: 0.01
+  null_required: 0.01
+  unknown_code: 0.01
+  negative_amount: 0.01
+  scale_error: 0.01
+  future_date: 0.01
+  code_formatting: 0.01
+  dpd_jump: 0.01
+  paid_while_rolling: 0.01
+  activity_after_closure: 0.01
+  close_reason_mismatch: 0.01
+  date_format: 0.01
+  type_mismatch: 0.01

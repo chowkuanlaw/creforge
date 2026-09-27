@@ -85,8 +85,9 @@ written off.
 - **Integrity** (hard guarantees; any failure is a bug): unique ids, every foreign key
   resolves, the account opens on or after its approved inquiry, month histories are
   contiguous and end at closure, no rows after write-off, no skipped buckets, no
-  payment on a roll-forward, no negative amounts, exactly one primary borrower per
-  account, and no person listed twice on the same account.
+  payment on a roll-forward, no negative amounts, no nulls in required columns, no
+  codes outside the allowed values, no dates outside the window, exactly one primary
+  borrower per account, and no person listed twice on the same account.
 - **Calibration** (against the profile's `targets`): 30+ DPD share and annual
   write-off rate per product; 12-month bad rate increasing across grades; the seasoning
   peak falls at 6–35 months on book; no artefact at the start of the window; joint
@@ -112,6 +113,26 @@ bank range for 2015–2026 that each target is set from:
 Sources, method and caveats are in [docs/calibration.md](docs/calibration.md). For
 example, personal and auto write-offs sit above the bank-only series on purpose, because
 that series excludes finance companies.
+
+## Testing data-quality checks: fault injection
+
+Test data that is *wrong in known ways* proves your pipeline's data-quality checks work.
+`creforge inject` corrupts a copy of a clean dataset with 16 kinds of realistic fault
+(duplicates, orphan rows, missing months, nulls, unknown codes, ×100 amounts, future
+dates, DPD jumps, activity after write-off, bad date formats, text in number columns
+and more) and writes an answer key listing every one. `creforge score` then grades
+what your checks found:
+
+```console
+$ creforge inject clean --faults standard -o dirty
+$ creforge score dirty/faults.parquet my_findings.csv --min-recall 0.9
+- Recall: 94.2% (injected faults your checks found)
+- Precision: 99.1% (findings that were real faults)
+```
+
+(The recall and precision above are illustrative output.) Details, the full fault
+catalogue and the answer-key format are in
+[docs/fault-injection.md](docs/fault-injection.md).
 
 ## Quickstart notebook
 
@@ -166,7 +187,8 @@ measure your own machine.
 
 ## Roadmap
 
-1. ~~Guarantor and joint-account links~~: done in 0.2.
+1. ~~Guarantor and joint-account links~~: done in 0.2. ~~Fault injection for
+   testing data-quality checks~~: done in 0.5.
 2. Contagion: a called guarantee raising the guarantor's own risk; supplementary cards.
 3. Business subjects, directors and shareholding graphs.
 4. Collateral and legal/litigation records.

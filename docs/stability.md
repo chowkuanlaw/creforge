@@ -46,6 +46,8 @@ Supported names, importable from `creforge`:
 | `write_dataset` | Generate straight to disk, chunk by chunk |
 | `Dataset`, `DiskDataset` | In-memory and on-disk datasets |
 | `validate`, `Report` | Integrity and calibration report |
+| `inject`, `load_fault_profile`, `list_fault_profiles` | Fault injection (corrupted copy plus answer key) |
+| `score`, `ScoreReport`, `row_key` | Grade data-quality findings against an answer key |
 | `__version__` | Package version |
 
 Everything else (modules such as `creforge.engine`, `creforge.generator` and
@@ -54,7 +56,8 @@ The fields of `Report.metrics` are informational and may gain keys in minor vers
 
 ## Command line
 
-`creforge generate`, `creforge validate` and `creforge profiles list|show`, with their
+`creforge generate`, `creforge validate`, `creforge inject`, `creforge score`,
+`creforge profiles list|show` and `creforge faults list|show`, with their
 documented options, follow the same rules as the Python API. Removing or renaming an
 option needs a major version. New options may appear in minor versions. The Markdown
 report text may change at any time; use `validate --json` for machine-readable output.

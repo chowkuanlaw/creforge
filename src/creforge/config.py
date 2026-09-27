@@ -301,15 +301,22 @@ def _deep_merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _read_profile_dict(ref: str | Path, _seen: tuple[str, ...] = ()) -> dict[str, Any]:
+PROFILES_PACKAGE = "creforge.profiles"
+
+
+def _read_profile_dict(
+    ref: str | Path, _seen: tuple[str, ...] = (), package: str = PROFILES_PACKAGE
+) -> dict[str, Any]:
+    """Read a YAML profile (built-in name or file path), resolving ``extends:`` chains."""
     path = Path(ref)
     if path.suffix in {".yaml", ".yml"} and path.exists():
         text, key, here = path.read_text(encoding="utf-8"), str(path.resolve()), path.parent
     else:
         name = str(ref)
-        if name not in list_profiles():
-            raise FileNotFoundError(f"unknown profile {name!r}; built-ins: {list_profiles()}")
-        text = resources.files("creforge.profiles").joinpath(f"{name}.yaml").read_text("utf-8")
+        builtins = _list_builtin(package)
+        if name not in builtins:
+            raise FileNotFoundError(f"unknown profile {name!r}; built-ins: {builtins}")
+        text = resources.files(package).joinpath(f"{name}.yaml").read_text("utf-8")
         key, here = f"builtin:{name}", None
     if key in _seen:
         raise ValueError(f"circular profile inheritance: {' -> '.join(_seen + (key,))}")
@@ -320,7 +327,12 @@ def _read_profile_dict(ref: str | Path, _seen: tuple[str, ...] = ()) -> dict[str
     parent_ref: str | Path = parent
     if here is not None and (here / parent).exists():
         parent_ref = here / parent
-    return _deep_merge(_read_profile_dict(parent_ref, _seen + (key,)), data)
+    return _deep_merge(_read_profile_dict(parent_ref, _seen + (key,), package), data)
+
+
+def _list_builtin(package: str) -> list[str]:
+    root = resources.files(package)
+    return sorted(p.name[:-5] for p in root.iterdir() if p.name.endswith(".yaml"))
 
 
 def load_profile(ref: str | Path) -> Profile:
@@ -329,5 +341,4 @@ def load_profile(ref: str | Path) -> Profile:
 
 
 def list_profiles() -> list[str]:
-    root = resources.files("creforge.profiles")
-    return sorted(p.name[:-5] for p in root.iterdir() if p.name.endswith(".yaml"))
+    return _list_builtin(PROFILES_PACKAGE)
