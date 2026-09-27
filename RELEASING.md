@@ -25,10 +25,12 @@ anywhere. Anyone with maintainer rights on the GitHub repository can release.
    ```
 6. **Push to `main`** and wait for CI to pass (every OS, Python version, and the
    min-deps job).
-7. **Tag the release** on the `main` commit that CI passed:
-   ```console
-   $ git tag vX.Y.Z && git push origin vX.Y.Z
-   ```
+7. **Release**, on the `main` commit that CI passed. Either:
+   - *Actions → Release → Run workflow*, branch `main`, version `X.Y.Z`; or
+   - push a tag:
+     ```console
+     $ git tag vX.Y.Z && git push origin vX.Y.Z
+     ```
    The `Release` workflow checks that the tag matches `pyproject.toml`, builds, uploads
    to PyPI, and creates the GitHub release page from the version's `CHANGELOG.md`
    section. (Publishing a release in the GitHub web UI also works; the workflow skips

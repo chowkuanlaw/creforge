@@ -2,11 +2,17 @@ name: Release
 
 # Publishes to PyPI with trusted publishing (OIDC): no API token is stored anywhere.
 #
-# Two ways to release (see RELEASING.md); both are safe to combine:
-#   - push a version tag:  git tag v1.2.3 && git push origin v1.2.3
-#     (this workflow then also creates the GitHub release page from CHANGELOG.md), or
+# Three ways to release (see RELEASING.md); all are safe to combine:
+#   - Actions tab -> Release -> Run workflow on main, entering the version (creates the tag),
+#   - push a version tag:  git tag v1.2.3 && git push origin v1.2.3, or
 #   - publish a release in the GitHub web UI.
+# Each creates the GitHub release page from CHANGELOG.md if it doesn't exist yet.
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, without the v (must match pyproject.toml)"
+        required: true
   push:
     tags: ["v*"]
   release:
@@ -24,8 +30,10 @@ jobs:
           python-version: "3.12"
       - name: Check the tag matches the package version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          if [ -n "$INPUT_VERSION" ]; then tag="${INPUT_VERSION#v}"; else tag="${GITHUB_REF_NAME#v}"; fi
           version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           if [ "$tag" != "$version" ]; then
             echo "::error::Tag v$tag does not match pyproject.toml version $version"
@@ -80,4 +88,5 @@ jobs:
           ' CHANGELOG.md > notes.md
           echo "" >> notes.md
           echo "Install: \`pip install creforge==$VERSION\`" >> notes.md
-          gh release create "$tag" --title "creforge $VERSION" --notes-file notes.md --verify-tag
+          # Creates the tag on this commit if it doesn't exist (manual runs); reuses it otherwise.
+          gh release create "$tag" --title "creforge $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
