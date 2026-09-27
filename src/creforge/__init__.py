@@ -1,9 +1,10 @@
 """creforge: PII-safe synthetic credit bureau data from explicit behavioural rules."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from .config import Config, Profile, list_profiles, load_profile  # noqa: E402
 from .dataset import Dataset, DiskDataset, generate, write_dataset  # noqa: E402
+from .ddl import copy_script, ddl  # noqa: E402
 from .faults import (  # noqa: E402
     ScoreReport,
     inject,
@@ -12,6 +13,7 @@ from .faults import (  # noqa: E402
     row_key,
     score,
 )
+from .load import load_duckdb  # noqa: E402
 from .validate import Report, validate  # noqa: E402
 
 __all__ = [
@@ -22,10 +24,13 @@ __all__ = [
     "Report",
     "ScoreReport",
     "__version__",
+    "copy_script",
+    "ddl",
     "generate",
     "inject",
     "list_fault_profiles",
     "list_profiles",
+    "load_duckdb",
     "load_fault_profile",
     "load_profile",
     "row_key",

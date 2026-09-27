@@ -43,3 +43,25 @@ jobs:
       - run: python -m pip install -e ".[dev]" -c ci/min-constraints.txt
       - run: python -c "import numpy, polars, pyarrow; print(numpy.__version__, polars.__version__, pyarrow.__version__)"
       - run: python -m pytest
+
+  postgres:
+    # Runs the generated Postgres DDL (with constraints) and \copy script against a real server.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CREFORGE_TEST_POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]"
+      - run: psql --version
+      - run: python -m pytest tests/test_ddl.py -k postgres -rs

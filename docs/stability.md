@@ -48,6 +48,8 @@ Supported names, importable from `creforge`:
 | `validate`, `Report` | Integrity and calibration report |
 | `inject`, `load_fault_profile`, `list_fault_profiles` | Fault injection (corrupted copy plus answer key) |
 | `score`, `ScoreReport`, `row_key` | Grade data-quality findings against an answer key |
+| `ddl`, `copy_script` | Warehouse DDL (Athena, Glue, DuckDB, Postgres, Redshift, Snowflake) and a Postgres `\copy` script |
+| `load_duckdb` | Load a dataset into DuckDB (optional extra `creforge[duckdb]`) |
 | `__version__` | Package version |
 
 Everything else (modules such as `creforge.engine`, `creforge.generator` and
@@ -57,7 +59,8 @@ The fields of `Report.metrics` are informational and may gain keys in minor vers
 ## Command line
 
 `creforge generate`, `creforge validate`, `creforge inject`, `creforge score`,
-`creforge profiles list|show` and `creforge faults list|show`, with their
+`creforge ddl`, `creforge load duckdb`, `creforge profiles list|show` and
+`creforge faults list|show`, with their
 documented options, follow the same rules as the Python API. Removing or renaming an
 option needs a major version. New options may appear in minor versions. The Markdown
 report text may change at any time; use `validate --json` for machine-readable output.

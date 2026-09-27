@@ -7,6 +7,23 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-27
+
+### Added
+- **Warehouse DDL** ([docs/warehouses.md](docs/warehouses.md)): `creforge ddl --dialect
+  athena|glue|duckdb|postgres|redshift|snowflake` prints the table definitions for a
+  dataset (Glue: `TableInput` JSON). `--dataset` takes the profile, money type and format
+  from a manifest. `--constraints` adds NOT NULL, primary and foreign keys and, on
+  Postgres and DuckDB, `CHECK` constraints listing each code column's allowed values.
+  `--copy-script` appends psql `\copy` commands that load a CSV dataset into Postgres.
+- `creforge load duckdb DATASET --db FILE` creates the tables and loads a dataset
+  (optional extra: `pip install "creforge[duckdb]"`). Dirty datasets load too, with
+  unreadable values as NULL, unless `--constraints` is given.
+- Python API `ddl`, `copy_script` and `load_duckdb`.
+- CI runs the Postgres DDL and `\copy` script against a real Postgres 16. DuckDB is
+  tested on every platform. Athena, Glue, Redshift and Snowflake output is snapshot-tested
+  only.
+
 ## [0.5.0] - 2026-09-27
 
 ### Added
@@ -139,7 +156,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/chowkuanlaw/creforge/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chowkuanlaw/creforge/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/chowkuanlaw/creforge/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/chowkuanlaw/creforge/compare/v0.2.0...v0.3.0

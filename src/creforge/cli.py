@@ -13,7 +13,8 @@ from pydantic import ValidationError
 
 from . import __version__
 from .config import Config, list_profiles, load_profile
-from .dataset import write_dataset
+from .dataset import DiskDataset, write_dataset
+from .ddl import DIALECTS, copy_script, ddl
 from .faults import inject, list_fault_profiles, load_fault_profile, score
 from .validate import validate
 
@@ -112,6 +113,64 @@ def score_cmd(answer_key, findings, as_json, min_recall) -> None:
     click.echo(json.dumps(rep.to_dict(), indent=2) if as_json else rep.to_markdown())
     if min_recall is not None and rep.recall < min_recall:
         sys.exit(1)
+
+
+@main.command(name="ddl")
+@click.option("--dialect", "-d", type=click.Choice(DIALECTS), required=True)
+@click.option("--profile", "-p", default="baseline", show_default=True,
+              help="Profile whose codes the CHECK constraints allow (ignored when --dataset is given).")
+@click.option("--dataset", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Take the profile, money type and format from this dataset's manifest.")
+@click.option("--money", type=click.Choice(["decimal", "float"]), default=None,
+              help="Money column type [default: decimal, or the dataset's].")
+@click.option("--format", "fmt", type=click.Choice(["parquet", "csv"]), default=None,
+              help="Storage format for Athena/Glue [default: parquet, or the dataset's].")
+@click.option("--location", help="S3 prefix holding the tables (Athena, Glue), e.g. s3://bucket/creforge")
+@click.option("--database", help="Database/schema to create the tables in.")
+@click.option("--constraints", is_flag=True,
+              help="Add NOT NULL, primary/foreign keys and (Postgres, DuckDB) CHECK constraints.")
+@click.option("--copy-script", "copy_from", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Postgres only: append psql \\copy commands that load this CSV dataset.")
+@click.option("--out", "-o", type=click.Path(dir_okay=False, path_type=Path), help="Write to a file.")
+def ddl_cmd(dialect, profile, dataset, money, fmt, location, database, constraints, copy_from, out) -> None:
+    """Print CREATE TABLE statements (Glue: TableInput JSON) for a creforge dataset."""
+    if dataset:
+        manifest = DiskDataset.open(dataset).manifest
+        profile = DiskDataset.open(dataset).config.profile
+        money = money or manifest["config"].get("money", "float")
+        fmt = fmt or manifest["format"]
+    text = ddl(dialect, profile=profile, money=money or "decimal", format=fmt or "parquet",
+               location=location, database=database, constraints=constraints)
+    if copy_from:
+        if dialect != "postgres":
+            raise click.UsageError("--copy-script is only for --dialect postgres")
+        text += "\n" + copy_script(copy_from, database)
+    if out:
+        out.write_text(text, encoding="utf-8")
+        click.echo(f"Wrote {out}")
+    else:
+        click.echo(text, nl=False)
+
+
+@main.group(name="load")
+def load_group() -> None:
+    """Load a dataset into a database."""
+
+
+@load_group.command(name="duckdb")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--db", type=click.Path(dir_okay=False, path_type=Path), required=True,
+              help="DuckDB database file (created if missing).")
+@click.option("--constraints", is_flag=True, help="Create tables with keys and CHECK constraints.")
+@click.option("--replace", is_flag=True, help="Drop existing creforge tables first.")
+def load_duckdb_cmd(dataset, db, constraints, replace) -> None:
+    """Create the tables in DuckDB and load DATASET (needs: pip install 'creforge[duckdb]')."""
+    from .load import load_duckdb
+
+    counts = load_duckdb(dataset, db, constraints=constraints, replace=replace)
+    click.echo(f"Loaded {dataset} into {db}")
+    for table, n in counts.items():
+        click.echo(f"  {table:<14} {n:>14,}")
 
 
 @main.group()

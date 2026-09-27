@@ -1,0 +1,239 @@
+[
+  {
+    "Name": "subject",
+    "TableType": "EXTERNAL_TABLE",
+    "Parameters": {
+      "classification": "parquet"
+    },
+    "StorageDescriptor": {
+      "Columns": [
+        {
+          "Name": "subject_id",
+          "Type": "string"
+        },
+        {
+          "Name": "birth_year",
+          "Type": "int"
+        },
+        {
+          "Name": "region",
+          "Type": "string"
+        },
+        {
+          "Name": "income_band",
+          "Type": "string"
+        },
+        {
+          "Name": "risk_grade",
+          "Type": "string"
+        },
+        {
+          "Name": "created_month",
+          "Type": "date"
+        }
+      ],
+      "Location": "s3://bucket/creforge/subject/",
+      "InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "SerdeInfo": {
+        "SerializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      }
+    }
+  },
+  {
+    "Name": "inquiry",
+    "TableType": "EXTERNAL_TABLE",
+    "Parameters": {
+      "classification": "parquet"
+    },
+    "StorageDescriptor": {
+      "Columns": [
+        {
+          "Name": "inquiry_id",
+          "Type": "string"
+        },
+        {
+          "Name": "subject_id",
+          "Type": "string"
+        },
+        {
+          "Name": "inquiry_date",
+          "Type": "date"
+        },
+        {
+          "Name": "lender_id",
+          "Type": "string"
+        },
+        {
+          "Name": "product_type",
+          "Type": "string"
+        },
+        {
+          "Name": "requested_amount",
+          "Type": "decimal(18,2)"
+        },
+        {
+          "Name": "outcome",
+          "Type": "string"
+        }
+      ],
+      "Location": "s3://bucket/creforge/inquiry/",
+      "InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "SerdeInfo": {
+        "SerializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      }
+    }
+  },
+  {
+    "Name": "account",
+    "TableType": "EXTERNAL_TABLE",
+    "Parameters": {
+      "classification": "parquet"
+    },
+    "StorageDescriptor": {
+      "Columns": [
+        {
+          "Name": "account_id",
+          "Type": "string"
+        },
+        {
+          "Name": "subject_id",
+          "Type": "string"
+        },
+        {
+          "Name": "inquiry_id",
+          "Type": "string"
+        },
+        {
+          "Name": "lender_id",
+          "Type": "string"
+        },
+        {
+          "Name": "product_type",
+          "Type": "string"
+        },
+        {
+          "Name": "open_date",
+          "Type": "date"
+        },
+        {
+          "Name": "credit_limit",
+          "Type": "decimal(18,2)"
+        },
+        {
+          "Name": "principal",
+          "Type": "decimal(18,2)"
+        },
+        {
+          "Name": "tenor_months",
+          "Type": "int"
+        },
+        {
+          "Name": "interest_rate",
+          "Type": "double"
+        },
+        {
+          "Name": "secured",
+          "Type": "boolean"
+        },
+        {
+          "Name": "close_date",
+          "Type": "date"
+        },
+        {
+          "Name": "close_reason",
+          "Type": "string"
+        }
+      ],
+      "Location": "s3://bucket/creforge/account/",
+      "InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "SerdeInfo": {
+        "SerializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      }
+    }
+  },
+  {
+    "Name": "account_month",
+    "TableType": "EXTERNAL_TABLE",
+    "Parameters": {
+      "classification": "parquet"
+    },
+    "StorageDescriptor": {
+      "Columns": [
+        {
+          "Name": "account_id",
+          "Type": "string"
+        },
+        {
+          "Name": "as_of_month",
+          "Type": "date"
+        },
+        {
+          "Name": "balance",
+          "Type": "decimal(18,2)"
+        },
+        {
+          "Name": "amount_due",
+          "Type": "decimal(18,2)"
+        },
+        {
+          "Name": "amount_paid",
+          "Type": "decimal(18,2)"
+        },
+        {
+          "Name": "dpd_bucket",
+          "Type": "string"
+        },
+        {
+          "Name": "months_in_arrears",
+          "Type": "int"
+        },
+        {
+          "Name": "status",
+          "Type": "string"
+        }
+      ],
+      "Location": "s3://bucket/creforge/account_month/",
+      "InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "SerdeInfo": {
+        "SerializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      }
+    }
+  },
+  {
+    "Name": "account_party",
+    "TableType": "EXTERNAL_TABLE",
+    "Parameters": {
+      "classification": "parquet"
+    },
+    "StorageDescriptor": {
+      "Columns": [
+        {
+          "Name": "account_id",
+          "Type": "string"
+        },
+        {
+          "Name": "subject_id",
+          "Type": "string"
+        },
+        {
+          "Name": "role",
+          "Type": "string"
+        },
+        {
+          "Name": "start_date",
+          "Type": "date"
+        }
+      ],
+      "Location": "s3://bucket/creforge/account_party/",
+      "InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "SerdeInfo": {
+        "SerializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+      }
+    }
+  }
+]

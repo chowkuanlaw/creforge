@@ -134,6 +134,21 @@ $ creforge score dirty/faults.parquet my_findings.csv --min-recall 0.9
 catalogue and the answer-key format are in
 [docs/fault-injection.md](docs/fault-injection.md).
 
+## Loading into a warehouse
+
+`creforge ddl` writes the table definitions for Athena, Glue, DuckDB, Postgres, Redshift
+or Snowflake, with the right types for every column and, optionally, keys and allowed
+values. `creforge load duckdb` loads a dataset in one step.
+
+```console
+$ creforge ddl --dialect athena --dataset out --location s3://my-bucket/creforge
+$ creforge ddl --dialect postgres --dataset out --constraints -o schema.sql
+$ pip install "creforge[duckdb]" && creforge load duckdb out --db creforge.duckdb
+```
+
+Postgres users also get a psql `\copy` script. Details, and which engines are tested
+for real, are in [docs/warehouses.md](docs/warehouses.md).
+
 ## Quickstart notebook
 
 [`examples/quickstart.ipynb`](examples/quickstart.ipynb) walks through generating a
@@ -195,7 +210,8 @@ measure your own machine.
 5. Clearly marked synthetic PII for UI testing.
 6. Calibration to *published aggregate* statistics.
 7. Scripted scenarios (moratoria, rate shocks).
-8. DuckDB/Postgres/Iceberg loaders; dbt and Glue catalog integration.
+8. ~~DuckDB/Postgres loaders and Glue catalog DDL~~: done in 0.6. Iceberg and dbt
+   integration.
 9. Country flavour packs built only from public specifications.
 
 ## Contributing
