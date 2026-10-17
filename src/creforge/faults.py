@@ -20,8 +20,9 @@ import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from . import __version__
+from ._compat import renamed_kwarg
 from .config import _list_builtin, _read_profile_dict
-from .dataset import MANIFEST, DiskDataset, _write_chunk
+from .dataset import MANIFEST, DiskDataset, Format, _write_chunk
 from .engine import DPD_BUCKETS
 
 FAULT_PROFILES_PACKAGE = "creforge.fault_profiles"
@@ -460,19 +461,20 @@ assert set(_FAULTS) == set(FAULT_TYPES)
 # --- inject ----------------------------------------------------------------------------------
 
 
-def inject(clean: str | Path, out: str | Path, faults: str | Path | FaultProfile = "standard",
-           seed: int = 0, format: str | None = None) -> dict:
-    """Write a corrupted copy of dataset ``clean`` to ``out``, plus the answer key.
+@renamed_kwarg("clean", "dataset")
+def inject(dataset: str | Path, out: str | Path, faults: str | Path | FaultProfile = "standard",
+           seed: int = 0, format: Format | None = None) -> dict:
+    """Write a corrupted copy of the clean ``dataset`` to ``out``, plus the answer key.
 
     ``format`` defaults to the clean dataset's. The CSV-only fault types (``date_format``,
     ``type_mismatch``) are skipped for Parquet output, which enforces column types.
     Same clean dataset + profile + seed → identical output.
     """
-    src = DiskDataset.open(clean)
+    src = DiskDataset.open(dataset)
     profile = faults if isinstance(faults, FaultProfile) else load_fault_profile(faults)
     fmt = format or src.manifest["format"]
     out = Path(out)
-    if out.resolve() == Path(clean).resolve():
+    if out.resolve() == Path(dataset).resolve():
         raise ValueError("inject would overwrite the clean dataset; choose another output directory")
     out.mkdir(parents=True, exist_ok=True)
     cfg = src.manifest["config"]

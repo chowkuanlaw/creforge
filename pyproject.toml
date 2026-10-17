@@ -4,24 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creforge"
-version = "0.8.0"
+version = "1.0.0"
 description = "PII-safe synthetic credit bureau data from explicit behavioural rules."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "creforge contributors" }]
 keywords = ["synthetic-data", "credit-risk", "credit-bureau", "test-data", "privacy"]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: Financial and Insurance Industry",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Office/Business :: Financial",
   "Topic :: Software Development :: Testing",
 ]

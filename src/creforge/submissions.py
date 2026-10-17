@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from . import __version__
 from .config import _list_builtin, _read_profile_dict
-from .dataset import DiskDataset
+from .dataset import DiskDataset, Format
 from .engine import DPD_BUCKETS
 from .schema import SCHEMA
 
@@ -240,7 +240,7 @@ def _write(df: pl.DataFrame, path: Path, fmt: str) -> None:
 
 
 def submissions(dataset: str | Path, out: str | Path, issues: str | Path | IssueProfile = "standard",
-                seed: int = 0, format: str | None = None) -> dict:
+                seed: int = 0, format: Format | None = None) -> dict:
     """Split ``dataset`` into monthly lender submissions under ``out``.
 
     Writes ``<lender>/<YYYY-MM>/<submission_id>.<format>`` files, the delivery log

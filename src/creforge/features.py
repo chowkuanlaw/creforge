@@ -8,12 +8,14 @@ and inquiries), so the table is built chunk by chunk.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 
 import polars as pl
 
+from .config import Profile, load_profile
 from .dataset import Dataset, DiskDataset
 from .engine import DPD_BUCKETS
 
@@ -143,8 +145,23 @@ def _month_date(col: str) -> pl.Expr:
     return pl.date(pl.col(col) // 12, pl.col(col) % 12 + 1, 1)
 
 
-def feature_columns(products: Iterable[str]) -> list[str]:
-    """Feature column names in output order (keys, exclusion and target columns excluded)."""
+def feature_columns(profile: str | Path | Profile = "baseline", **deprecated) -> list[str]:
+    """Feature column names in output order for ``profile`` (keys, exclusion and target excluded).
+
+    One ``n_open_<product>`` column exists per product of the profile.
+    """
+    if "products" in deprecated or not isinstance(profile, (str, Path, Profile)):
+        warnings.warn("feature_columns(products) is deprecated; pass the profile instead "
+                      "(removed in creforge 2.0)", DeprecationWarning, stacklevel=2)
+        products = list(deprecated.pop("products", profile))
+    else:
+        products = list((profile if isinstance(profile, Profile) else load_profile(profile)).products)
+    if deprecated:
+        raise TypeError(f"feature_columns() got unexpected arguments: {sorted(deprecated)}")
+    return _feature_columns(products)
+
+
+def _feature_columns(products: Iterable[str]) -> list[str]:
     return ["age_years", "months_on_file", "n_open_accounts", *[f"n_open_{p}" for p in products],
             "secured_share", "total_balance", "revolving_utilisation", "max_utilisation",
             "worst_dpd_now", *[f"worst_dpd_{w}m" for w in WINDOWS], "months_since_delinquency",
@@ -190,7 +207,7 @@ def features(dataset: str | Path | Dataset, as_of: str | list[str], performance:
             parts.append(df.with_columns(pl.lit(_label(a)).str.to_date("%Y-%m-%d").alias("as_of_month")))
     out = pl.concat(parts)
     cols = ["subject_id", "as_of_month", *(["risk_grade"] if include_truth else []),
-            *feature_columns(products), "excluded", "bad", "bad_month"]
+            *_feature_columns(products), "excluded", "bad", "bad_month"]
     return out.select(cols).sort("as_of_month", "subject_id")
 
 

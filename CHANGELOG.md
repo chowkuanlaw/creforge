@@ -7,6 +7,50 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-17
+
+creforge is now stable: the promises in [docs/stability.md](docs/stability.md) apply
+from this release on. **Data is unchanged:** datasets, dirty copies, submission inboxes
+and feature tables made with 0.8.0 reproduce byte-for-byte in 1.0.0 (same configuration,
+seed and environment). This was checked across 1,909 output files.
+
+### Upgrading from 0.x
+- **Python 3.11 or newer is required.** Python 3.10 reached end of life in October 2026.
+- Four names changed for consistency. The old ones still work but emit a
+  `DeprecationWarning`, and are removed in 2.0:
+  - `inject(clean=...)` → `inject(dataset=...)`;
+  - `validate(data=...)` → `validate(dataset=...)`;
+  - `feature_columns(products)` → `feature_columns(profile="baseline")`, which takes a
+    profile name, path or `Profile`.
+
+  Positional calls such as `cf.inject("clean", "dirty")` are unaffected.
+- `inject` and `submissions` now type `format` as `"parquet" | "csv"`.
+
+### Added
+- Python 3.14 support, tested in CI.
+- The stability policy now also covers:
+  - the fault answer key;
+  - the submission files, delivery log and issue answer key;
+  - the feature table;
+  - the DDL type mapping;
+  - the JSON output of `validate`, `score` and `reconcile`.
+
+  A new contract test fails if any of these formats loses or changes a column or key.
+- CI tests the newest Polars 1.x alongside Polars 2.x (the newest release) and the
+  oldest supported versions (Polars 1.0, NumPy 1.26, pyarrow 14).
+- A weekly CI run against the newest dependency releases, so upstream breakage is
+  caught early.
+
+### Changed
+- Package classifier `Development Status :: 5 - Production/Stable`.
+
+### Deprecated
+- `inject(clean=...)`, `validate(data=...)` and `feature_columns(products)`; see
+  *Upgrading* above.
+
+### Removed
+- Python 3.10 support.
+
 ## [0.8.0] - 2026-09-27
 
 ### Added
@@ -208,7 +252,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/chowkuanlaw/creforge/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/chowkuanlaw/creforge/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/chowkuanlaw/creforge/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/chowkuanlaw/creforge/compare/v0.5.0...v0.6.0

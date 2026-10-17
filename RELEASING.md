@@ -36,7 +36,11 @@ anywhere. Anyone with maintainer rights on the GitHub repository can release.
    to PyPI, and creates the GitHub release page from the version's `CHANGELOG.md`
    section. (Publishing a release in the GitHub web UI also works; the workflow skips
    whatever already exists.)
-8. **Verify**: in a fresh virtual environment, `pip install creforge==X.Y.Z`, then run
+8. **For a patch release, check the data is unchanged**: generate the same datasets
+   (generate, inject, submissions, features) with the previous release and the new code,
+   in the same environment, and compare them with `diff -r`. Only `creforge_version` in
+   the manifests may differ, unless the CHANGELOG says a data bug was fixed.
+9. **Verify**: in a fresh virtual environment, `pip install creforge==X.Y.Z`, then run
    `creforge generate -n 2000 -o out && creforge validate out`.
 
 ## If the release workflow fails

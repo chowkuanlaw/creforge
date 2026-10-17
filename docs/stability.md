@@ -1,8 +1,8 @@
 # Stability and compatibility
 
-creforge follows [Semantic Versioning](https://semver.org/). Before 1.0, minor versions
-(0.x) may still change the schema; each such change is listed under **Changed** in the
-[CHANGELOG](../CHANGELOG.md). From 1.0, the rules below are promises.
+creforge follows [Semantic Versioning](https://semver.org/). **Since 1.0, the rules below
+are promises:** nothing listed here breaks without a new major version (2.0, 3.0, …), and
+every change is recorded in the [CHANGELOG](../CHANGELOG.md).
 
 ## The output schema
 
@@ -18,6 +18,24 @@ The tables, columns, types and allowed values documented in the
 Every schema change bumps `schema_version` in `manifest.json`, so a pipeline can check
 what it is reading. Enum values marked *(profile)* in the data dictionary belong to the
 profile, not the schema: custom profiles may define their own.
+
+## Other output formats
+
+The same rules (nothing removed, renamed or retyped outside a major version; additions
+allowed in minor versions) apply to everything else creforge writes for other programs
+to read:
+
+| Format | Documented in |
+|---|---|
+| Fault answer key `faults.parquet`, `row_key` format, and the findings file `score` reads | [fault-injection.md](fault-injection.md) |
+| Submission files, delivery log `submissions.parquet`, answer key `issues.parquet`, `inbox.json` | [submissions.md](submissions.md) |
+| Feature table: columns, their meaning, bad definitions and `excluded` values | [features.md](features.md) |
+| DDL: the SQL type each column gets in each dialect (the statement text itself may be reformatted) | [warehouses.md](warehouses.md) |
+| JSON output of `validate --json`, `score --json` and `reconcile --json` (keys may be added, never removed) | each command's docs |
+
+New feature columns, issue types and fault types may be added in minor versions. A new
+fault or issue type only takes effect in the built-in profiles of a minor version, never
+a patch, since it changes the output for a given seed.
 
 ## Reproducibility (same seed, same data)
 
@@ -55,6 +73,9 @@ Supported names, importable from `creforge`:
 | `reconcile`, `ReconcileReport` | Check tables a pipeline rebuilt from submissions against the truth |
 | `__version__` | Package version |
 
+Removing or renaming any of these, or one of their documented parameters, needs a
+major version; new names and new optional parameters may appear in minor versions.
+
 Everything else (modules such as `creforge.engine`, `creforge.generator` and
 `creforge.parties`, and their functions) is internal and may change in any release.
 The fields of `Report.metrics` are informational and may gain keys in minor versions.
@@ -77,7 +98,8 @@ CHANGELOG.
 
 ## Supported environments
 
-- Python: the versions tested in CI (currently 3.10–3.13).
+- Python: the versions tested in CI (currently 3.11–3.14). Support for a Python version
+  may end in a minor release once that version has reached its upstream end of life.
 - Dependencies: the minimum versions declared in `pyproject.toml` are tested in CI,
   alongside the latest releases.
 - Operating systems: Linux, macOS and Windows.

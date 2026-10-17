@@ -17,6 +17,10 @@ Use it to test credit data pipelines, demo dashboards, teach credit-risk analyti
 benchmark warehouses, or give contractors and vendors a realistic dataset without a
 data-sharing agreement.
 
+**Stable since 1.0.** The tables, commands, Python API and output formats follow a
+written [stability policy](docs/stability.md): nothing breaks without a new major
+version, and the same version, configuration and seed give byte-identical data.
+
 **Just want the data?** Every [release](https://github.com/chowkuanlaw/creforge/releases/latest)
 has a ready-made sample attached (10,000 borrowers × 36 months, Parquet and CSV) that
 opens in DuckDB, Power BI, Excel or pandas, with nothing to install.
@@ -257,7 +261,7 @@ $ ruff check . && pytest -m "not slow"   # fast suite
 $ pytest -m slow                         # calibration suite
 ```
 
-CI runs on Linux, macOS and Windows with Python 3.10–3.13. Design notes are in
+CI runs on Linux, macOS and Windows with Python 3.11–3.14. Design notes are in
 [`docs/superpowers/specs`](docs/superpowers/specs).
 
 **Clean-room rule:** contributions must not contain parameters, code sets or schemas

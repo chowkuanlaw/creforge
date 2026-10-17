@@ -106,3 +106,13 @@ One row per person on an account (added in schema version 2).
 | `row_counts` | Rows per table. |
 | `privacy` | Statement that no real data was used. |
 | `config` | The full resolved configuration, including the profile. |
+
+## Other formats
+
+The commands that build on a dataset write their own documented formats, covered by the
+same [stability rules](stability.md#other-output-formats):
+
+- `creforge inject`: the answer key `faults.parquet` ([fault-injection.md](fault-injection.md))
+- `creforge submissions`: submission files, `submissions.parquet`, `issues.parquet`
+  ([submissions.md](submissions.md))
+- `creforge features`: the feature table ([features.md](features.md))

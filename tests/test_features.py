@@ -31,8 +31,7 @@ def _mi(d) -> int:
 
 
 def test_shape_and_columns(ds, feats):
-    products = list(ds.config.profile.products)
-    assert feats.columns == ["subject_id", "as_of_month", "risk_grade", *feature_columns(products),
+    assert feats.columns == ["subject_id", "as_of_month", "risk_grade", *feature_columns(ds.config.profile),
                              "excluded", "bad", "bad_month"]
     on_file = ds.subject.filter(pl.col("created_month") <= pl.date(2024, 6, 1)).height
     assert feats.height == on_file == feats["subject_id"].n_unique()
@@ -110,7 +109,7 @@ def test_signal_gini_and_grade_ordering(feats):
     dev = feats.filter(pl.col("excluded").is_null())
     rates = dev.group_by("risk_grade").agg(pl.col("bad").mean()).sort("risk_grade")["bad"].to_list()
     assert rates == sorted(rates) and rates[-1] > 5 * rates[0]
-    cols = [c for c in feature_columns(["credit_card"]) if c in dev.columns]
+    cols = [c for c in feature_columns() if c in dev.columns]
     x = dev.select(cols).cast(pl.Float64).to_numpy()
     miss = np.isnan(x)
     x = np.where(miss, np.nanmedian(x, axis=0), x)

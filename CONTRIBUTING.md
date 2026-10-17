@@ -30,7 +30,7 @@ $ pytest -m "not slow"      # fast suite, a few seconds
 $ pytest -m slow            # calibration suite, ~20 seconds
 ```
 
-CI runs both suites on Linux, macOS and Windows with Python 3.10–3.13, plus a job with
+CI runs both suites on Linux, macOS and Windows with Python 3.11–3.14, plus a job with
 the oldest dependency versions we support (`ci/min-constraints.txt`) and a 95% coverage
 gate. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 

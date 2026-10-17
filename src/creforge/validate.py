@@ -14,6 +14,7 @@ from pathlib import Path
 
 import polars as pl
 
+from ._compat import renamed_kwarg
 from .dataset import PRIVACY_STATEMENT, Dataset, DiskDataset
 from .engine import CLOSE_REASONS, DPD_BUCKETS, STATUSES
 from .faults import REQUIRED
@@ -97,10 +98,10 @@ class Report:
         return "\n".join(lines)
 
 
-def validate(data: Dataset | DiskDataset | str | Path) -> Report:
+@renamed_kwarg("data", "dataset")
+def validate(dataset: Dataset | DiskDataset | str | Path) -> Report:
     """Validate an in-memory :class:`Dataset` or a directory written by ``write_dataset``."""
-    if isinstance(data, (str, Path)):
-        data = DiskDataset.open(data)
+    data = DiskDataset.open(dataset) if isinstance(dataset, (str, Path)) else dataset
     cfg = data.config
     start = pl.lit(cfg.start_month + "-01").str.to_date()
     last_month_idx = cfg.months - 1
