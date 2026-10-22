@@ -19,6 +19,7 @@ from .ddl import DIALECTS, copy_script, ddl
 from .faults import inject, list_fault_profiles, load_fault_profile, score
 from .features import BAD_DEFINITIONS, features
 from .identities import identities
+from .public_calibration import compare_public_reference, fetch_public_reference
 from .reconcile import reconcile
 from .scenarios import ScenarioConfig
 from .submissions import list_issue_profiles, load_issue_profile, submissions
@@ -93,6 +94,46 @@ def validate_cmd(path, as_json, report, strict) -> None:
     click.echo(json.dumps(rep.to_dict(), indent=2, default=str) if as_json else md)
     if not rep.integrity_ok or (strict and not rep.calibration_ok):
         sys.exit(1)
+
+
+@main.group(name="calibration")
+def calibration_group() -> None:
+    """Fetch published aggregate series and compare them with generated data."""
+
+
+@calibration_group.command(name="fetch")
+@click.option("--out", "-o", type=click.Path(file_okay=False, path_type=Path), required=True)
+@click.option("--start", type=click.DateTime(formats=["%Y-%m-%d"]), default="2015-01-01",
+              show_default=True, help="First reference quarter (quarter start date).")
+@click.option("--end", type=click.DateTime(formats=["%Y-%m-%d"]), default="2026-04-01",
+              show_default=True, help="Last reference quarter (quarter start date).")
+def calibration_fetch(out, start, end) -> None:
+    """Save checksum-verified FRED CSVs and a provenance manifest in OUT."""
+    reference = fetch_public_reference(out, start=start.date(), end=end.date())
+    click.echo(f"Saved {len(reference.hashes)} series, {reference.start} to {reference.end}, in {out}")
+
+
+@calibration_group.command(name="report")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--reference", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              required=True, help="Directory saved by `creforge calibration fetch`.")
+@click.option("--out", "-o", type=click.Path(dir_okay=False, path_type=Path),
+              help="Write the Markdown report to this path.")
+@click.option("--json-out", type=click.Path(dir_okay=False, path_type=Path),
+              help="Also write the full machine-readable report, including source checksums.")
+def calibration_report(dataset, reference, out, json_out) -> None:
+    """Compare DATASET with a fixed snapshot of published aggregate rates."""
+    result = compare_public_reference(dataset, reference)
+    markdown = result.to_markdown()
+    if out:
+        out.write_text(markdown, encoding="utf-8")
+        click.echo(f"Wrote {out}")
+    else:
+        click.echo(markdown)
+    if json_out:
+        json_out.write_text(json.dumps(result.to_dict(), indent=2, default=str) + "\n",
+                            encoding="utf-8")
+        click.echo(f"Wrote {json_out}")
 
 
 @main.command(name="inject")

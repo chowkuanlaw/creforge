@@ -114,6 +114,8 @@ bank range for 2015–2026 that each target is set from:
 
 12-month bad rate by grade: A 0.03% · B 0.3% · C 0.9% · D 5.7% · E 16%.
 
+Use `creforge calibration fetch` and `creforge calibration report` to save the cited
+public CSVs with checksums and reproduce a comparison against a generated dataset.
 Sources, method and caveats are in [docs/calibration.md](docs/calibration.md). For
 example, personal and auto write-offs sit above the bank-only series on purpose, because
 that series excludes finance companies.
@@ -244,7 +246,8 @@ measure your own machine.
 4. Collateral and legal/litigation records.
 5. [Clearly marked synthetic identities](docs/identities.md) for UI testing are
    available as an optional overlay.
-6. Calibration to *published aggregate* statistics.
+6. [Reproducible comparison with published aggregates](docs/calibration.md) is
+   available; profile targets remain illustrative rather than fitted to real records.
 7. [Timed credit-stress scripts](docs/scenarios.md) support macro stress,
    new-origination rate shocks, and installment payment moratoria. Changes to
    existing-account rates remain on the wish list.

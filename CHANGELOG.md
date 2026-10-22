@@ -7,6 +7,14 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-22
+
+### Added
+- A `creforge calibration fetch` workflow that saves the six cited FRED aggregate
+  series with source URLs, retrieval time and SHA-256 checksums, plus
+  `creforge calibration report` for a reproducible descriptive comparison with
+  generated portfolio metrics.
+
 ## [1.1.0] - 2026-10-22
 
 ### Added
@@ -271,7 +279,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/chowkuanlaw/creforge/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/chowkuanlaw/creforge/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/chowkuanlaw/creforge/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/chowkuanlaw/creforge/compare/v0.7.0...v0.8.0

@@ -65,6 +65,7 @@ Supported names, importable from `creforge`:
 | `write_dataset` | Generate straight to disk, chunk by chunk |
 | `Dataset`, `DiskDataset` | In-memory and on-disk datasets |
 | `validate`, `Report` | Integrity and calibration report |
+| `fetch_public_reference`, `load_public_reference`, `compare_public_reference`, `PublicCalibrationReport` | Save and compare public aggregate reference series |
 | `inject`, `load_fault_profile`, `list_fault_profiles` | Fault injection (corrupted copy plus answer key) |
 | `score`, `ScoreReport`, `row_key` | Grade data-quality findings against an answer key |
 | `ddl`, `copy_script` | Warehouse DDL (Athena, Glue, DuckDB, Postgres, Redshift, Snowflake) and a Postgres `\copy` script |

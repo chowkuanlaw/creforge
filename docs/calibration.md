@@ -17,6 +17,43 @@ every calibration target comes from, so you can judge (and change) them.
 FRED data was retrieved on 2026-09-26. The series are quarterly, seasonally adjusted,
 and in percent (charge-offs annualised).
 
+## Reproduce a public aggregate comparison
+
+The commands below fetch the six cited FRED series, freeze their original CSV bytes
+with SHA-256 checksums and a retrieval timestamp, and compare them with a generated
+dataset. The reference period uses quarter starts, inclusive of both endpoints.
+
+```console
+$ creforge generate --profile baseline --subjects 10000 --months 36 --seed 42 --out bureau
+$ creforge calibration fetch --out fred-2015q1-2026q2 \
+    --start 2015-01-01 --end 2026-04-01
+$ creforge calibration report bureau --reference fred-2015q1-2026q2 \
+    --out public-comparison.md --json-out public-comparison.json
+```
+
+The snapshot directory contains one original CSV per series and `manifest.json` with
+the source URL, retrieval time, selected quarters and each CSV's SHA-256. The report
+refuses a modified CSV or a missing quarter. Keep the snapshot and JSON report with
+the experiment if you need to reproduce it after FRED revises a series. Fetching a
+new snapshot may produce new values; an existing snapshot is never overwritten.
+The download needs HTTPS access to `fred.stlouisfed.org` but no API key.
+
+For each series, the report converts FRED's percentage points to fractions, selects
+every quarter in the chosen period, and calculates the minimum, median and maximum.
+It compares those numbers with `creforge validate`'s product metrics and the
+profile's target band; the JSON also records the gap from the public median in
+percentage points. The report lists card, mortgage and other-consumer references for
+credit card, mortgage, personal loan and auto loan. It does not assign invented
+public series to overdraft or BNPL.
+
+**This is a descriptive comparison, not a pass/fail calibration test.** FRED's
+delinquency rates are balance-weighted while creforge counts account-months. FRED's
+charge-offs are net of recoveries and balance-based while creforge counts accounts
+written off. The other-consumer series covers banks and is only a proxy for auto and
+personal loans. The profile target bands may therefore differ from the public range.
+The existing `creforge validate --strict` check remains the pass/fail check against
+the profile's stated targets.
+
 ## Observed ranges vs creforge baseline
 
 2015 Q1 to 2026 Q2 for the reference; creforge `baseline`, 40,000 subjects × 36 months,

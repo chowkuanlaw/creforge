@@ -1,6 +1,6 @@
 """creforge: PII-safe synthetic credit bureau data from explicit behavioural rules."""
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from .config import Config, Profile, list_profiles, load_profile  # noqa: E402
 from .dataset import Dataset, DiskDataset, generate, write_dataset  # noqa: E402
@@ -17,6 +17,12 @@ from .features import feature_columns, features  # noqa: E402
 from .iceberg import load_iceberg  # noqa: E402
 from .identities import identities  # noqa: E402
 from .load import load_duckdb  # noqa: E402
+from .public_calibration import (  # noqa: E402
+    PublicCalibrationReport,
+    compare_public_reference,
+    fetch_public_reference,
+    load_public_reference,
+)
 from .reconcile import ReconcileReport, reconcile  # noqa: E402
 from .scenarios import Scenario, ScenarioConfig, apply_scenario  # noqa: E402
 from .submissions import IssueProfile, list_issue_profiles, load_issue_profile, submissions  # noqa: E402
@@ -28,6 +34,7 @@ __all__ = [
     "DiskDataset",
     "IssueProfile",
     "Profile",
+    "PublicCalibrationReport",
     "ReconcileReport",
     "Report",
     "ScoreReport",
@@ -35,10 +42,12 @@ __all__ = [
     "ScenarioConfig",
     "__version__",
     "apply_scenario",
+    "compare_public_reference",
     "copy_script",
     "ddl",
     "feature_columns",
     "features",
+    "fetch_public_reference",
     "generate",
     "identities",
     "inject",
@@ -47,6 +56,7 @@ __all__ = [
     "list_profiles",
     "load_duckdb",
     "load_iceberg",
+    "load_public_reference",
     "load_fault_profile",
     "load_issue_profile",
     "load_profile",
