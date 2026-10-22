@@ -110,7 +110,7 @@ class _Issue:
 
 
 def _month_end(m: np.datetime64) -> np.datetime64:
-    return (m + 1).astype("datetime64[D]") - np.timedelta64(1, "D")
+    return (m + np.timedelta64(1, "M")).astype("datetime64[D]") - np.timedelta64(1, "D")
 
 
 def _after(t: np.datetime64, rng, lo: int, hi: int) -> np.datetime64:

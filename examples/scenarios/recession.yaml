@@ -1,0 +1,13 @@
+name: recession_from_month_12
+events:
+  - type: macro_multiplier
+    start_month: 12
+    end_month: 24
+    multiplier: 1.8
+  - type: origination_rate_delta
+    start_month: 12
+    end_month: 24
+    delta: 0.03
+  - type: payment_moratorium
+    start_month: 12
+    end_month: 15

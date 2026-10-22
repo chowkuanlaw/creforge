@@ -1,0 +1,11 @@
+name: creforge_demo
+version: 1.0.0
+config-version: 2
+profile: creforge_demo
+
+model-paths: [models]
+test-paths: [tests]
+
+models:
+  creforge_demo:
+    +materialized: view

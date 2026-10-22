@@ -90,7 +90,12 @@ $ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f load.sql
 `\copy` reads the files on the machine running psql, so the server can be remote.
 Tables are loaded parents first, so foreign keys are satisfied.
 
-**DuckDB.** Use `creforge load duckdb` (below), or run the DDL yourself.
+**DuckDB.** Use `creforge load duckdb` (below), or run the DDL yourself. A tested
+[dbt example](../examples/dbt/README.md) declares the loaded tables as sources and
+builds a monthly portfolio summary view.
+
+**Iceberg.** The optional [local Iceberg loader](iceberg.md) writes all five tables
+to a PyIceberg SQL catalog and can be used with a file warehouse for development.
 
 **Redshift and Snowflake.** Ordinary `CREATE TABLE` statements. Load the Parquet files
 with `COPY … FORMAT AS PARQUET` (Redshift) or a stage and `COPY INTO … FILE_FORMAT =

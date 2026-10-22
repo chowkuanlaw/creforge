@@ -18,7 +18,9 @@ from .dataset import DiskDataset, write_dataset
 from .ddl import DIALECTS, copy_script, ddl
 from .faults import inject, list_fault_profiles, load_fault_profile, score
 from .features import BAD_DEFINITIONS, features
+from .identities import identities
 from .reconcile import reconcile
+from .scenarios import ScenarioConfig
 from .submissions import list_issue_profiles, load_issue_profile, submissions
 from .validate import validate
 
@@ -55,10 +57,19 @@ def main() -> None:
 @click.option("--chunk-size", type=click.IntRange(min=1), default=50_000, show_default=True)
 @click.option("--money", type=click.Choice(["decimal", "float"]), default="decimal", show_default=True,
               help="Money columns as exact Decimal(18, 2) or Float64 (2 dp).")
-def generate(profile, subjects, months, seed, start_month, out, fmt, workers, chunk_size, money) -> None:
+@click.option("--scenario", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="YAML file with timed credit-stress events.")
+def generate(profile, subjects, months, seed, start_month, out, fmt, workers, chunk_size, money,
+             scenario) -> None:
     """Generate a dataset into OUT (one part file per chunk, plus manifest.json)."""
-    cfg = Config.from_profile(profile, subjects=subjects, months=months, seed=seed,
-                              start_month=start_month, chunk_size=chunk_size, money=money)
+    if scenario:
+        cfg = ScenarioConfig.from_profile(
+            profile, scenario=scenario, subjects=subjects, months=months, seed=seed,
+            start_month=start_month, chunk_size=chunk_size, money=money,
+        )
+    else:
+        cfg = Config(profile=load_profile(profile), subjects=subjects, months=months, seed=seed,
+                     start_month=start_month, chunk_size=chunk_size, money=money)
     t0 = time.perf_counter()
     manifest = write_dataset(cfg, out, format=fmt, workers=workers)
     secs = time.perf_counter() - t0
@@ -146,6 +157,22 @@ def features_cmd(dataset, as_of, performance, bad, include_truth, out) -> None:
     for month, rows, in_scope, rate in summary.iter_rows():
         click.echo(f"  {str(month)[:7]}  {rows:>10,} subjects, {in_scope:>10,} in scope, "
                    f"bad rate {rate or 0:.2%} ({bad}, {performance} months)")
+
+
+@main.command(name="identities")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--out", "-o", type=click.Path(dir_okay=False, path_type=Path), required=True,
+              help="Output file, .parquet or .csv.")
+def identities_cmd(dataset, out) -> None:
+    """Write clearly synthetic names, contacts and addresses for UI tests."""
+    if out.suffix not in (".parquet", ".csv"):
+        raise click.UsageError("--out must end in .parquet or .csv")
+    df = identities(dataset)
+    if out.suffix == ".parquet":
+        df.write_parquet(out)
+    else:
+        df.write_csv(out)
+    click.echo(f"Wrote {out}: {df.height:,} synthetic identities")
 
 
 @main.command(name="submissions")
@@ -254,6 +281,22 @@ def load_duckdb_cmd(dataset, db, constraints, replace) -> None:
 
     counts = load_duckdb(dataset, db, constraints=constraints, replace=replace)
     click.echo(f"Loaded {dataset} into {db}")
+    for table, n in counts.items():
+        click.echo(f"  {table:<14} {n:>14,}")
+
+
+@load_group.command(name="iceberg")
+@click.argument("dataset", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--catalog-uri", required=True, help="SQL catalog URI, e.g. sqlite:////path/catalog.db.")
+@click.option("--warehouse", required=True, help="Warehouse URI, e.g. file:///path/warehouse.")
+@click.option("--namespace", default="creforge", show_default=True)
+@click.option("--replace", is_flag=True, help="Purge and recreate existing Iceberg tables.")
+def load_iceberg_cmd(dataset, catalog_uri, warehouse, namespace, replace) -> None:
+    """Load DATASET into an Iceberg SQL catalog (needs: pip install 'creforge[iceberg]')."""
+    from .iceberg import load_iceberg
+
+    counts = load_iceberg(dataset, catalog_uri, warehouse, namespace=namespace, replace=replace)
+    click.echo(f"Loaded {dataset} into Iceberg namespace {namespace}")
     for table, n in counts.items():
         click.echo(f"  {table:<14} {n:>14,}")
 

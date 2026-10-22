@@ -112,7 +112,13 @@ def _read_rebuilt(rebuilt) -> dict[str, pl.DataFrame]:
             raise ImportError("reading a DuckDB file needs: pip install 'creforge[duckdb]'") from exc
         con = duckdb.connect(str(path), read_only=True)
         try:
-            return {t: con.execute(f"SELECT * FROM {t}").pl() for t in KEYS}
+            out = {}
+            for t in KEYS:
+                result = con.sql(f"SELECT * FROM {t}")
+                arrow = (result.to_arrow_table() if hasattr(result, "to_arrow_table")
+                         else result.fetch_arrow_table())
+                out[t] = pl.from_arrow(arrow)
+            return out
         finally:
             con.close()
     out = {}
@@ -254,7 +260,7 @@ def _attribute(problems: pl.DataFrame, lenders: pl.DataFrame, answer_key: Path) 
         m = np.datetime64(min(first.get(sid) or month, month), "M")
         while m <= np.datetime64(month, "M"):
             months.setdefault((lender, m.astype("datetime64[D]").item()), set()).add(iss)
-            m += 1
+            m += np.timedelta64(1, "M")
     delivery = pl.DataFrame(
         [(lender, m, ", ".join(sorted(v))) for (lender, m), v in months.items()],
         schema={"lender_id": pl.String, "as_of_month": pl.Date, "delivery_cause": pl.String}, orient="row")

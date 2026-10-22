@@ -15,6 +15,7 @@ import polars as pl
 from . import __version__
 from .config import Config
 from .generator import MONEY_COLUMNS, MONEY_DECIMAL, SCHEMA_VERSION, TABLES, generate_chunk, make_context
+from .scenarios import ScenarioConfig
 
 Format = Literal["parquet", "csv"]
 MANIFEST = "manifest.json"
@@ -145,7 +146,9 @@ class DiskDataset:
 
     @property
     def config(self) -> Config:
-        return Config.model_validate(self.manifest["config"])
+        data = self.manifest["config"]
+        model = ScenarioConfig if "scenario" in data else Config
+        return model.model_validate(data)
 
     def iter_chunks(self) -> Iterator[dict[str, pl.DataFrame]]:
         fmt = self.manifest["format"]

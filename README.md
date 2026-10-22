@@ -242,11 +242,15 @@ measure your own machine.
 2. Contagion: a called guarantee raising the guarantor's own risk; supplementary cards.
 3. Business subjects, directors and shareholding graphs.
 4. Collateral and legal/litigation records.
-5. Clearly marked synthetic PII for UI testing.
+5. [Clearly marked synthetic identities](docs/identities.md) for UI testing are
+   available as an optional overlay.
 6. Calibration to *published aggregate* statistics.
-7. Scripted scenarios (moratoria, rate shocks).
-8. ~~DuckDB/Postgres loaders and Glue catalog DDL~~: done in 0.6. Iceberg and dbt
-   integration.
+7. [Timed credit-stress scripts](docs/scenarios.md) support macro stress,
+   new-origination rate shocks, and installment payment moratoria. Changes to
+   existing-account rates remain on the wish list.
+8. ~~DuckDB/Postgres loaders and Glue catalog DDL~~: done in 0.6. A
+   [dbt example](examples/dbt/README.md) and a [local Iceberg loader](docs/iceberg.md)
+   are available; remote Iceberg catalogs remain untested.
 9. Country flavour packs built only from public specifications.
 
 ## Contributing

@@ -30,6 +30,7 @@ to read:
 | Fault answer key `faults.parquet`, `row_key` format, and the findings file `score` reads | [fault-injection.md](fault-injection.md) |
 | Submission files, delivery log `submissions.parquet`, answer key `issues.parquet`, `inbox.json` | [submissions.md](submissions.md) |
 | Feature table: columns, their meaning, bad definitions and `excluded` values | [features.md](features.md) |
+| Optional synthetic identity overlay | [identities.md](identities.md) |
 | DDL: the SQL type each column gets in each dialect (the statement text itself may be reformatted) | [warehouses.md](warehouses.md) |
 | JSON output of `validate --json`, `score --json` and `reconcile --json` (keys may be added, never removed) | each command's docs |
 
@@ -68,8 +69,11 @@ Supported names, importable from `creforge`:
 | `score`, `ScoreReport`, `row_key` | Grade data-quality findings against an answer key |
 | `ddl`, `copy_script` | Warehouse DDL (Athena, Glue, DuckDB, Postgres, Redshift, Snowflake) and a Postgres `\copy` script |
 | `load_duckdb` | Load a dataset into DuckDB (optional extra `creforge[duckdb]`) |
+| `load_iceberg` | Load a dataset into an Iceberg SQL catalog (optional extra `creforge[iceberg]`) |
 | `submissions`, `IssueProfile`, `load_issue_profile`, `list_issue_profiles` | Monthly lender submission files with delivery issues |
 | `features`, `feature_columns` | Point-in-time scorecard feature table with a good/bad target |
+| `identities` | Synthetic display names, contacts and addresses for UI tests |
+| `Scenario`, `ScenarioConfig`, `apply_scenario` | Apply timed macro, new-origination rate and moratorium events |
 | `reconcile`, `ReconcileReport` | Check tables a pipeline rebuilt from submissions against the truth |
 | `__version__` | Package version |
 
@@ -83,7 +87,8 @@ The fields of `Report.metrics` are informational and may gain keys in minor vers
 ## Command line
 
 `creforge generate`, `creforge validate`, `creforge inject`, `creforge score`,
-`creforge ddl`, `creforge load duckdb`, `creforge features`, `creforge submissions`, `creforge reconcile`,
+`creforge ddl`, `creforge load duckdb`, `creforge load iceberg`, `creforge features`, `creforge identities`,
+`creforge submissions`, `creforge reconcile`,
 `creforge profiles list|show`, `creforge faults list|show` and
 `creforge issues list|show`, with their
 documented options, follow the same rules as the Python API. Removing or renaming an

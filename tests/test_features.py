@@ -158,7 +158,10 @@ def test_reference_sql_matches(ds, feats, tmp_path):
     ds.write(tmp_path / "clean")
     cf.load_duckdb(tmp_path / "clean", tmp_path / "db.duckdb")
     con = duckdb.connect(str(tmp_path / "db.duckdb"), read_only=True)
-    got = con.execute(sql, {"as_of": "2024-06-01"}).pl()
+    result = con.sql(sql, params={"as_of": "2024-06-01"})
+    arrow = (result.to_arrow_table() if hasattr(result, "to_arrow_table")
+             else result.fetch_arrow_table())
+    got = pl.from_arrow(arrow)
     con.close()
     cols = ["subject_id", "n_open_accounts", "total_balance", "worst_dpd_12m", "inquiries_12m"]
     want = feats.select(cols).sort("subject_id")

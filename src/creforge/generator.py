@@ -12,6 +12,7 @@ from . import engine as E
 from . import parties as P
 from .config import Config, Profile
 from .ids import make_ids
+from .scenarios import Moratorium, RateShock, ScenarioConfig
 
 TABLES = ("subject", "inquiry", "account", "account_month", "account_party")
 # Bumped whenever a table, column, type or allowed value changes.
@@ -195,6 +196,16 @@ def _inquiries(ctx: Context, subj: Subjects, rng) -> Inquiries:
     lender = rng.integers(1, prof.lenders + 1, k).astype(np.int16)
     terms = _draw_terms(ctx, subj, s_idx, product, rng)
 
+    if isinstance(ctx.cfg, ScenarioConfig):
+        for event in ctx.cfg.scenario.events:
+            if isinstance(event, RateShock):
+                active = (month >= event.start_month) & (month < event.end_month)
+                terms.rate[active] += event.delta
+        if any(isinstance(event, RateShock) for event in ctx.cfg.scenario.events):
+            terms.rate = np.round(terms.rate, 4)
+            if not np.isfinite(terms.rate).all() or (terms.rate < 0).any() or (terms.rate > 1).any():
+                raise ValueError("scenario origination rates must stay between 0 and 1")
+
     # "Credit hungry" penalty: prior inquiries in the trailing window lower approval odds.
     w = prof.inquiries.recent_window_months
     stride, offset = 64, w + 1
@@ -284,11 +295,19 @@ def _build_book(ctx: Context, subj: Subjects, pre: Terms, age0: np.ndarray, new:
 
 def _simulate(ctx: Context, book: E.Book, rng) -> E.Rows:
     t, months = ctx.tables, ctx.cfg.months
+    moratoria = ([event for event in ctx.cfg.scenario.events if isinstance(event, Moratorium)]
+                 if isinstance(ctx.cfg, ScenarioConfig) else [])
     parts: list[E.Rows] = []
     for m in range(months):
         step_idx = np.flatnonzero(book.active & (book.open_abs < m))
         if len(step_idx):
-            parts.append(E.step(t, book, step_idx, m, float(ctx.macro[m]), rng))
+            holiday = None
+            if moratoria:
+                active = any(event.start_month <= m < event.end_month for event in moratoria)
+                holiday = ((book.state[step_idx] == E.C) & ~t.revolving[book.product[step_idx]]
+                           if active else np.zeros(len(step_idx), dtype=bool))
+            parts.append(E.step(t, book, step_idx, m, float(ctx.macro[m]), rng,
+                                moratorium=holiday))
         new_idx = np.flatnonzero(book.open_abs == m)
         if len(new_idx):
             parts.append(E.open_rows(t, book, new_idx, m, rng))

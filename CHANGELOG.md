@@ -7,6 +7,25 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-22
+
+### Added
+- A DuckDB-backed dbt example with creforge source declarations, a monthly portfolio
+  summary model, and data tests.
+- An optional `creforge identities` command and `identities()` API that produce
+  clearly marked synthetic names, unreachable contacts and addresses for each
+  subject, without changing existing dataset tables.
+- An optional `creforge load iceberg` command and `load_iceberg()` API for SQL
+  catalogs, tested with a local SQLite catalog and file warehouse.
+- Timed macro, new-origination rate and installment moratorium scripts through
+  `creforge generate --scenario` and the `ScenarioConfig` Python API.
+
+### Fixed
+- Reading rebuilt DuckDB tables and the reference SQL test now works with DuckDB 2.x
+  as well as the supported 1.x releases.
+- Monthly submission and reconciliation date arithmetic no longer emits NumPy's
+  implicit-month-increment deprecation warning.
+
 ## [1.0.0] - 2026-10-17
 
 creforge is now stable: the promises in [docs/stability.md](docs/stability.md) apply
@@ -252,7 +271,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/chowkuanlaw/creforge/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/chowkuanlaw/creforge/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/chowkuanlaw/creforge/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/chowkuanlaw/creforge/compare/v0.6.0...v0.7.0

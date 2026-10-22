@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: creforge
+    description: Tables loaded by `creforge load duckdb`.
+    schema: main
+    tables:
+      - name: subject
+      - name: inquiry
+      - name: account
+      - name: account_month
+      - name: account_party
+
+models:
+  - name: portfolio_summary
+    description: Account counts and balances by month and product.
+    columns:
+      - name: as_of_month
+        data_tests: [not_null]
+      - name: product_type
+        data_tests: [not_null]
+      - name: account_months
+        data_tests: [not_null]

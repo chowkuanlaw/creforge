@@ -90,6 +90,36 @@ def test_called_guarantor_cures_the_account():
     assert (rows.amount_paid == rows.amount_due).all()
 
 
+def test_current_installment_moratorium_pauses_and_reschedules_payments():
+    rng = np.random.default_rng(19)
+    book = _random_book(rng, 40)
+    idx = np.flatnonzero(~TABLES.revolving[book.product])[:1]
+    book.state[idx] = E.C
+    book.mia[idx] = 0
+    book.open_abs[idx] = -1
+    book.tenor[idx] = 24
+    book.rate_m[idx] = 0.01
+    book.bal[idx] = 1200.0
+    book.arrears[idx] = 0.0
+    book.payment[idx] = np.round(E.annuity(np.array([1200.0]), np.array([0.01]),
+                                               np.array([24])), 2)
+    book.inst[idx] = E.next_installment(TABLES, book, idx)
+    original_payment = book.payment[idx].copy()
+    t = E.Tables(**{**TABLES.__dict__, "roll": TABLES.roll * 0, "close": TABLES.close * 0})
+
+    for month in (0, 1):
+        row = E.step(t, book, idx, month, 1.0, rng, moratorium=np.array([True]))
+        assert row.amount_due[0] == row.amount_paid[0] == 0
+        assert row.status[0] == E.ST_CURRENT
+    assert book.holiday_months[idx].tolist() == [2]
+    assert book.bal[idx].tolist() == [1224.12]
+
+    row = E.step(t, book, idx, 2, 1.0, rng)
+    assert row.amount_due[0] > 0 and row.amount_paid[0] == row.amount_due[0]
+    assert book.payment[idx][0] > original_payment[0]
+    assert not book.holiday_active[idx].any()
+
+
 def test_joint_multiplier_is_geometric_mean():
     from creforge.parties import blended_multipliers
     roll, cure = blended_multipliers(TABLES.g_roll, TABLES.g_cure, np.array([0, 4, 2]), np.array([4, -1, 2]))

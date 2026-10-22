@@ -177,6 +177,8 @@ class Book:
     roll_mult: np.ndarray  # float64 risk multipliers (grade, or joint blend)
     cure_mult: np.ndarray
     guaranteed: np.ndarray  # bool: a guarantor can be called at 90+ DPD
+    holiday_months: np.ndarray | None = None  # months of scheduled payments suspended
+    holiday_active: np.ndarray | None = None
 
     @property
     def size(self) -> int:
@@ -225,12 +227,35 @@ def _dpd_status(state: np.ndarray, mia: np.ndarray) -> tuple[np.ndarray, np.ndar
     return dpd.astype(np.int8), status.astype(np.int8)
 
 
-def step(t: Tables, book: Book, idx: np.ndarray, month: int, macro: float, rng) -> Rows:
+def step(t: Tables, book: Book, idx: np.ndarray, month: int, macro: float, rng,
+         moratorium: np.ndarray | None = None) -> Rows:
     """Advance accounts ``idx`` by one month, mutating ``book``; return their rows."""
     n = len(idx)
     prod, grade, s = book.product[idx], book.grade[idx], book.state[idx].astype(np.int64)
     rev = t.revolving[prod]
     age = month - book.open_abs[idx]
+    if moratorium is None:
+        holiday = np.zeros(n, dtype=bool)
+    else:
+        holiday = np.asarray(moratorium, dtype=bool)
+        if holiday.shape != (n,) or (holiday & (rev | (s != C))).any():
+            raise ValueError("moratorium must select current installment accounts only")
+    if moratorium is not None or book.holiday_active is not None:
+        if book.holiday_months is None:
+            book.holiday_months = np.zeros(book.size, dtype=np.int32)
+            book.holiday_active = np.zeros(book.size, dtype=bool)
+        resumed = book.holiday_active[idx] & ~holiday
+        if resumed.any():
+            resumed_idx = idx[resumed]
+            remaining = np.maximum(
+                book.tenor[resumed_idx] - age[resumed] + 1 + book.holiday_months[resumed_idx], 12
+            )
+            book.payment[resumed_idx] = np.round(
+                annuity(book.bal[resumed_idx], book.rate_m[resumed_idx], remaining), 2
+            )
+            book.inst[resumed_idx] = next_installment(t, book, resumed_idx)
+        book.holiday_months[idx[holiday]] += 1
+        book.holiday_active[idx] = holiday
     inst, arr, bal, rate = book.inst[idx], book.arrears[idx], book.bal[idx], book.rate_m[idx]
     mia = book.mia[idx]
 
@@ -248,10 +273,11 @@ def step(t: Tables, book: Book, idx: np.ndarray, month: int, macro: float, rng) 
     # A guarantor called at 90+ DPD pays off the arrears: the account cures.
     called = book.guaranteed[idx] & (s >= D4) & (s <= D5) & (u_call < t.guarantor_call)
     ev[called] = EV_CURE
+    ev[holiday] = EV_STAY
 
     is_roll, is_cure, is_back = ev == EV_ROLL, ev == EV_CURE, ev == EV_BACK
     is_rs, is_close, is_stay = ev == EV_RS, ev == EV_CLOSE, ev == EV_STAY
-    missed = is_roll | (is_stay & (s == D5))
+    missed = (is_roll | (is_stay & (s == D5))) & ~holiday
 
     new_mia = mia.copy()
     new_mia[missed] = mia[missed] + 1
@@ -263,11 +289,12 @@ def step(t: Tables, book: Book, idx: np.ndarray, month: int, macro: float, rng) 
     new_state[is_close] = CL
 
     # Payments implied by the event.
-    due = inst + arr
+    due = np.where(holiday, 0.0, inst + arr)
     paid = np.zeros(n)
     new_arr = arr.copy()
     pay_current = is_stay & ~missed
     paid[pay_current] = inst[pay_current]
+    paid[holiday] = 0.0
     rev_current = pay_current & rev & (s == C)
     transactor = u_transactor < t.g_transactor[grade]
     extra = np.where(transactor, bal - inst, u_payfrac * 0.6 * np.maximum(bal - inst, 0.0))
