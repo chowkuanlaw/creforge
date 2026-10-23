@@ -248,7 +248,7 @@ measure your own machine.
    available as an optional overlay.
 6. [Reproducible comparison with published aggregates](docs/calibration.md) is
    available; profile targets remain illustrative rather than fitted to real records.
-7. [Timed credit-stress scripts](docs/scenarios.md) support macro stress,
+7. [Timed credit-stress scripts and scenario comparison](docs/scenarios.md) support macro stress,
    new-origination rate shocks, and installment payment moratoria. Changes to
    existing-account rates remain on the wish list.
 8. ~~DuckDB/Postgres loaders and Glue catalog DDL~~: done in 0.6. A

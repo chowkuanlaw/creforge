@@ -21,6 +21,7 @@ from .features import BAD_DEFINITIONS, features
 from .identities import identities
 from .public_calibration import compare_public_reference, fetch_public_reference
 from .reconcile import reconcile
+from .scenario_comparison import compare_scenario
 from .scenarios import ScenarioConfig
 from .submissions import list_issue_profiles, load_issue_profile, submissions
 from .validate import validate
@@ -133,6 +134,32 @@ def calibration_report(dataset, reference, out, json_out) -> None:
     if json_out:
         json_out.write_text(json.dumps(result.to_dict(), indent=2, default=str) + "\n",
                             encoding="utf-8")
+        click.echo(f"Wrote {json_out}")
+
+
+@main.group(name="scenario")
+def scenario_group() -> None:
+    """Compare a baseline run with a scripted scenario run."""
+
+
+@scenario_group.command(name="compare")
+@click.argument("baseline", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("stressed", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--out", "-o", type=click.Path(dir_okay=False, path_type=Path),
+              help="Write the Markdown report to this path.")
+@click.option("--json-out", type=click.Path(dir_okay=False, path_type=Path),
+              help="Also write a machine-readable comparison to this path.")
+def scenario_compare(baseline, stressed, out, json_out) -> None:
+    """Show product-rate changes from BASELINE to STRESSED."""
+    result = compare_scenario(baseline, stressed)
+    markdown = result.to_markdown()
+    if out:
+        out.write_text(markdown, encoding="utf-8")
+        click.echo(f"Wrote {out}")
+    else:
+        click.echo(markdown)
+    if json_out:
+        json_out.write_text(json.dumps(result.to_dict(), indent=2) + "\n", encoding="utf-8")
         click.echo(f"Wrote {json_out}")
 
 

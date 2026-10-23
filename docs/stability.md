@@ -75,6 +75,7 @@ Supported names, importable from `creforge`:
 | `features`, `feature_columns` | Point-in-time scorecard feature table with a good/bad target |
 | `identities` | Synthetic display names, contacts and addresses for UI tests |
 | `Scenario`, `ScenarioConfig`, `apply_scenario` | Apply timed macro, new-origination rate and moratorium events |
+| `compare_scenario`, `ScenarioComparisonReport` | Compare matched baseline and scripted scenario datasets |
 | `reconcile`, `ReconcileReport` | Check tables a pipeline rebuilt from submissions against the truth |
 | `__version__` | Package version |
 
@@ -89,7 +90,7 @@ The fields of `Report.metrics` are informational and may gain keys in minor vers
 
 `creforge generate`, `creforge validate`, `creforge inject`, `creforge score`,
 `creforge ddl`, `creforge load duckdb`, `creforge load iceberg`, `creforge features`, `creforge identities`,
-`creforge submissions`, `creforge reconcile`,
+`creforge submissions`, `creforge reconcile`, `creforge scenario compare`,
 `creforge profiles list|show`, `creforge faults list|show` and
 `creforge issues list|show`, with their
 documented options, follow the same rules as the Python API. Removing or renaming an

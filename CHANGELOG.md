@@ -7,6 +7,13 @@ output schema; every such change is listed under **Changed**.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-23
+
+### Added
+- A `creforge scenario compare` command and `compare_scenario()` API that report
+  product delinquency and annual write-off changes between matched baseline and
+  scripted scenario datasets, with Markdown and JSON output.
+
 ## [1.2.0] - 2026-10-22
 
 ### Added
@@ -279,7 +286,8 @@ First public release.
 - CLI: `creforge generate | validate | profiles list | profiles show`.
 - CI on Linux, macOS and Windows (Python 3.10–3.13); PyPI trusted publishing.
 
-[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/chowkuanlaw/creforge/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/chowkuanlaw/creforge/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/chowkuanlaw/creforge/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/chowkuanlaw/creforge/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/chowkuanlaw/creforge/compare/v0.8.0...v1.0.0

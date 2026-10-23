@@ -1,6 +1,6 @@
 """creforge: PII-safe synthetic credit bureau data from explicit behavioural rules."""
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 from .config import Config, Profile, list_profiles, load_profile  # noqa: E402
 from .dataset import Dataset, DiskDataset, generate, write_dataset  # noqa: E402
@@ -24,6 +24,7 @@ from .public_calibration import (  # noqa: E402
     load_public_reference,
 )
 from .reconcile import ReconcileReport, reconcile  # noqa: E402
+from .scenario_comparison import ScenarioComparisonReport, compare_scenario  # noqa: E402
 from .scenarios import Scenario, ScenarioConfig, apply_scenario  # noqa: E402
 from .submissions import IssueProfile, list_issue_profiles, load_issue_profile, submissions  # noqa: E402
 from .validate import Report, validate  # noqa: E402
@@ -39,10 +40,12 @@ __all__ = [
     "Report",
     "ScoreReport",
     "Scenario",
+    "ScenarioComparisonReport",
     "ScenarioConfig",
     "__version__",
     "apply_scenario",
     "compare_public_reference",
+    "compare_scenario",
     "copy_script",
     "ddl",
     "feature_columns",

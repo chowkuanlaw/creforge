@@ -42,6 +42,32 @@ $ creforge generate --profile baseline --scenario examples/scenarios/recession.y
 $ creforge validate bureau
 ```
 
+## Compare a scenario with its baseline
+
+Generate the two runs with the same profile, subjects, months, seed, start month,
+chunk size and money format. Then compare their product delinquency and write-off
+rates:
+
+```console
+$ creforge generate --profile baseline --subjects 10000 --months 36 --seed 42 \
+    --out baseline-data
+$ creforge generate --profile baseline --scenario examples/scenarios/recession.yaml \
+    --subjects 10000 --months 36 --seed 42 --out recession-data
+$ creforge scenario compare baseline-data recession-data \
+    --out scenario-comparison.md --json-out scenario-comparison.json
+```
+
+The report shows each run's 30+ DPD share, annual write-off rate, active
+account-months, and the scenario-minus-baseline difference in percentage points.
+It verifies that the runs use the same generation settings and original profile,
+that the second run records a scripted scenario, and that both pass integrity checks.
+The JSON includes both configuration hashes and the scenario events. Changes are
+descriptive results from synthetic data; the active account-month denominators may
+differ between runs. They do not predict a real portfolio's response.
+
+Python users can call `creforge.compare_scenario(baseline, stressed)` with in-memory
+datasets, `DiskDataset` objects or dataset directory paths.
+
 Validation still checks structural integrity. The calibration checks compare against
 the base profile's aggregate bands; a deliberately stressed run may fall outside them.
 
